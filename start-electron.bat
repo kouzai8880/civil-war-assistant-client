@@ -1,0 +1,3 @@
+@echo off
+echo 正在启动英雄联盟内战助手...
+npm run electron:dev

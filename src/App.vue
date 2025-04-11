@@ -7,6 +7,9 @@ import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { userApi } from './services/api'
 import { useUserStore } from './stores/user'
 import { useSocketStore } from './stores/socket'
+import { useElectronStore } from './stores/electron'
+import { isElectron } from './services/electron'
+import LCUStatus from './components/LCUStatus.vue'
 
 // API错误状态
 const apiError = ref(false)
@@ -15,6 +18,10 @@ const apiErrorMessage = ref('')
 // 获取store
 const userStore = useUserStore()
 const socketStore = useSocketStore()
+const electronStore = useElectronStore()
+
+// 是否在Electron环境中
+const isElectronEnv = ref(isElectron())
 
 // 监听登录状态变化
 watch(() => userStore.isLoggedIn, async (isLoggedIn) => {
@@ -48,7 +55,7 @@ const checkApiConnection = async () => {
   try {
     console.log('正在检查API连接状态...')
     const response = await userApi.getCurrentUser()
-    
+
     if (response.status === 'error') {
       if (response.message?.includes('404')) {
         apiErrorMessage.value = '(接口路径可能不正确)'
@@ -82,15 +89,42 @@ provide('apiStatus', {
   retryApiConnection
 })
 
-// 初始化时检查API连接
-onMounted(() => {
+// 初始化时检查API连接和初始化Electron
+onMounted(async () => {
+  // 检查API连接
   checkApiConnection()
+
+  // 初始化Electron功能
+  if (isElectronEnv.value) {
+    await electronStore.init()
+    console.log(`已在Electron环境中初始化，应用版本: ${electronStore.appVersion}`)
+  }
 })
 </script>
 
 <template>
   <div class="app">
     <el-config-provider :locale="zhCn">
+      <!-- API错误提示 -->
+      <el-alert
+        v-if="apiError"
+        class="api-error-banner"
+        title="API连接失败"
+        type="error"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <div class="api-error-content">
+            <span>无法连接到后端服务 {{ apiErrorMessage }}</span>
+            <el-button size="small" @click="retryApiConnection">重试</el-button>
+          </div>
+        </template>
+      </el-alert>
+
+      <!-- Electron环境下显示LCU状态 -->
+      <LCUStatus v-if="isElectronEnv" />
+
       <!-- 路由容器 -->
       <MainLayout>
         <RouterView />
@@ -112,6 +146,12 @@ onMounted(() => {
   top: 0;
   z-index: 2000;
   width: 100%;
+}
+
+.api-error-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* 页面过渡动画 */

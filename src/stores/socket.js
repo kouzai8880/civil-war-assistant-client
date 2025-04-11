@@ -141,18 +141,27 @@ export const useSocketStore = defineStore('socket', () => {
   }
 
   // 加入房间
-  const joinRoom = (roomId, userData = {}) => {
+  const joinRoom = (roomId, password = null) => {
     if (!connected.value) {
       error.value = 'WebSocket未连接，无法加入房间'
       return false
     }
 
     try {
-      console.log(`发送joinRoom事件，加入房间 ${roomId}`, userData)
+      // 准备加入房间的数据
+      const joinData = { roomId }
+
+      // 如果提供了密码，添加到请求数据中
+      if (password) {
+        joinData.password = password
+      }
+
+      console.log(`发送joinRoom事件，加入房间 ${roomId}`, password ? '带密码' : '无密码')
+
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
       if (socket) {
-        socket.emit('joinRoom', { roomId, ...userData })
+        socket.emit('joinRoom', joinData)
         // 不立即设置currentRoomId，等待roomJoined事件
         return true
       } else {

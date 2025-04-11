@@ -34,15 +34,35 @@ export const useRoomStore = defineStore('room', () => {
   const isUserInRoom = (room) => {
     if (!room || !userStore.userId) return false
 
-    const isPlayer = room.players && room.players.some(player => player.userId === userStore.userId);
-    const isSpectator = room.spectators && room.spectators.some(spectator => spectator.userId === userStore.userId);
+    console.log('检查用户是否在房间中:', room)
 
-    return isPlayer || isSpectator;
+    // 处理嵌套的房间数据结构
+    const roomData = room.room ? room.room : room
+
+    // 检查玩家列表
+    let isPlayer = false
+    if (roomData.players && Array.isArray(roomData.players)) {
+      isPlayer = roomData.players.some(player => player.userId === userStore.userId)
+    }
+
+    // 检查观众列表
+    let isSpectator = false
+    if (roomData.spectators && Array.isArray(roomData.spectators)) {
+      isSpectator = roomData.spectators.some(spectator => spectator.userId === userStore.userId)
+    }
+
+    console.log('用户是否在房间中:', isPlayer || isSpectator, '玩家:', isPlayer, '观众:', isSpectator)
+
+    return isPlayer || isSpectator
   }
 
   // 添加一个方法来设置当前房间
   const setCurrentRoom = (roomData) => {
-    if (!roomData) return
+    if (!roomData) {
+      console.log('清除当前房间数据')
+      currentRoom.value = null
+      return
+    }
 
     console.log('设置当前房间数据:', roomData)
 
@@ -91,7 +111,8 @@ export const useRoomStore = defineStore('room', () => {
   window.addEventListener('roleChanged', (event) => {
     console.log('收到roleChanged事件:', event.detail)
     if (event.detail && event.detail.status === 'success') {
-      const { room, role, teamId } = event.detail.data
+      // 只提取需要的room属性
+      const { room } = event.detail.data
       setCurrentRoom(room)
     }
   })
@@ -470,12 +491,11 @@ export const useRoomStore = defineStore('room', () => {
         }
       }
 
-      // 准备加入房间的数据
-      const userData = password ? { password } : {};
+      // 直接使用密码参数
       console.log('使用WebSocket加入房间:', roomId, password ? '带密码' : '无密码')
 
       // 使用WebSocket加入房间
-      const success = socketStore.joinRoom(roomId, userData)
+      const success = socketStore.joinRoom(roomId, password)
       if (!success) {
         throw new Error('发送WebSocket事件失败')
       }
@@ -600,13 +620,21 @@ export const useRoomStore = defineStore('room', () => {
     error.value = null
 
     try {
+      console.log(`调用开始游戏 API，房间ID: ${currentRoom.value.id}`)
       const response = await roomApi.startGame(currentRoom.value.id)
 
       if (response.status === 'success') {
+        console.log('开始游戏成功，响应:', response)
         // 更新房间状态
-        currentRoom.value = {
-          ...currentRoom.value,
-          status: 'in_progress'
+        if (response.data) {
+          // 如果服务器返回了新的房间数据，直接使用
+          currentRoom.value = response.data
+        } else {
+          // 否则只更新状态
+          currentRoom.value = {
+            ...currentRoom.value,
+            status: 'gaming'
+          }
         }
         return true
       } else {

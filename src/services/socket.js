@@ -168,13 +168,26 @@ export const roomApi = {
   },
 
   // 发送房间消息
-  sendRoomMessage: (roomId, content, type = 'text') => {
+  sendRoomMessage: (roomId, content, type = 'text', channel = 'public', teamId = null) => {
     if (!socket?.connected) {
       console.error('WebSocket未连接，无法发送房间消息')
       return
     }
-    console.log('发送房间消息:', { roomId, content, type })
-    socket.emit('roomMessage', { roomId, content, type })
+
+    // 根据文档，使用sendMessage事件
+    const messageData = {
+      roomId,
+      content,
+      channel
+    }
+
+    // 如果是队伍消息，添加teamId
+    if (channel === 'team' && teamId) {
+      messageData.teamId = teamId
+    }
+
+    console.log('发送房间消息:', messageData)
+    socket.emit('sendMessage', messageData)
   }
 }
 

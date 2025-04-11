@@ -130,7 +130,7 @@ async function createWindow() {
     win.loadFile(join(ROOT_PATH.dist, 'index.html'))
   } else {
     // 开发模式下，使用Vite开发服务器
-    win.loadURL('http://localhost:3000')
+    win.loadURL('http://localhost:3001')
     // 打开开发者工具 - 默认关闭
     // 如果需要打开开发者工具，可以取消下面这行的注释
     // win.webContents.openDevTools()

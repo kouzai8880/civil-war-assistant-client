@@ -17266,7 +17266,7 @@ async function createWindow() {
   if (app.isPackaged) {
     win.loadFile(join(ROOT_PATH.dist, "index.html"));
   } else {
-    win.loadURL("http://localhost:3000");
+    win.loadURL("http://localhost:3001");
   }
   win.on("close", (event) => {
     if (!isQuitting) {

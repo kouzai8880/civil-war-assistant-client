@@ -4,7 +4,7 @@ import io from 'socket.io-client'
 let socket = null
 
 // WebSocket服务器地址
-const SOCKET_URL = 'https://dvmxujshaduv.sealoshzh.site'
+const SOCKET_URL = 'http://localhost:3000'
 
 /**
  * 连接WebSocket
@@ -21,15 +21,15 @@ export const connectSocket = (token, avatar = '') => {
         reject(new Error('未提供有效token，无法建立WebSocket连接'))
         return
       }
-      
+
       // 如果已连接，则断开重连
       if (socket && socket.connected) {
         socket.disconnect()
       }
-      
+
       // 连接WebSocket服务器
       console.log('正在连接WebSocket服务器...')
-      
+
       // 简化连接参数，避免URL过长
       const options = {
         auth: { token },
@@ -43,20 +43,20 @@ export const connectSocket = (token, avatar = '') => {
           'Pragma': 'no-cache'
         }
       }
-      
+
       // 如果有头像且不是base64格式，才添加到query参数
       if (avatar && !avatar.startsWith('data:')) {
         options.query = { avatar }
       }
-      
+
       socket = io(SOCKET_URL, options)
-      
+
       // 连接成功
       socket.on('connect', () => {
         console.log('WebSocket连接成功，SocketID:', socket.id)
         resolve(socket)
       })
-      
+
       // 连接错误
       socket.on('connect_error', (error) => {
         console.error('WebSocket连接错误:', error)
@@ -66,13 +66,13 @@ export const connectSocket = (token, avatar = '') => {
           socket = null
         }
         reject(new Error('WebSocket连接错误: ' + (error.message || '')))
-        
+
         // 如果错误与认证相关，在控制台打印明确信息
         if (error.message && error.message.includes('认证失败')) {
           console.error('WebSocket认证错误: 请检查token是否有效')
         }
       })
-      
+
       // 连接超时
       socket.on('connect_timeout', () => {
         console.error('WebSocket连接超时')
@@ -219,4 +219,4 @@ export default {
   roomApi,
   voiceApi,
   sendRoomMessage: roomApi.sendRoomMessage
-} 
+}

@@ -105,23 +105,6 @@ onMounted(async () => {
 <template>
   <div class="app">
     <el-config-provider :locale="zhCn">
-      <!-- API错误提示 -->
-      <el-alert
-        v-if="apiError"
-        class="api-error-banner"
-        title="API连接失败"
-        type="error"
-        :closable="false"
-        show-icon
-      >
-        <template #default>
-          <div class="api-error-content">
-            <span>无法连接到后端服务 {{ apiErrorMessage }}</span>
-            <el-button size="small" @click="retryApiConnection">重试</el-button>
-          </div>
-        </template>
-      </el-alert>
-
       <!-- Electron环境下显示LCU状态 -->
       <LCUStatus v-if="isElectronEnv" />
 

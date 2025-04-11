@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 
 // 常用的英雄头像列表，用于随机分配
 const championIcons = [
-  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius', 
+  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius',
   'Ezreal', 'Garen', 'Jinx', 'Lux', 'Malphite',
   'Nami', 'Syndra', 'Thresh', 'Yasuo', 'Zed'
 ]
@@ -29,6 +29,11 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 // 模态框可见性
 const showCreateRoomModal = ref(false)
 
+// 密码输入对话框
+const showPasswordDialog = ref(false)
+const passwordInput = ref('')
+const currentRoomId = ref(null)
+
 // 热门房间
 const hotRooms = ref([])
 const myRooms = ref([])
@@ -46,7 +51,7 @@ onMounted(async () => {
         .filter(room => room.status === 'gaming' || room.status === 'waiting')
         .slice(0, 3)
     }
-    
+
     if (isLoggedIn.value) {
       // 加载我的房间，API会根据当前用户token识别用户
       const userRooms = await roomStore.fetchMyRooms()
@@ -103,29 +108,43 @@ const joinRoom = async (roomId) => {
     router.push('/login')
     return
   }
-  
+
   try {
     isLoading.value = true
-    
+
     // 获取房间信息，检查是否需要密码
     const room = hotRooms.value.find(r => r.id === roomId);
-    let password = null;
-    
+
     if (room && room.hasPassword) {
-      // 如果需要密码，弹出密码输入框
-      password = prompt('请输入房间密码:');
-      if (!password) {
-        // 用户取消了输入
-        isLoading.value = false;
-        return;
-      }
+      // 如果需要密码，弹出密码输入对话框
+      currentRoomId.value = roomId;
+      passwordInput.value = '';
+      showPasswordDialog.value = true;
+      isLoading.value = false;
+      return;
     }
-    
-    // 调用API加入房间，只传递密码参数
+
+    // 如果不需要密码，直接加入房间
+    await joinRoomWithPassword(roomId, null);
+  } catch (error) {
+    console.error('加入房间失败:', error)
+    ElMessage.error(error.message || '加入房间失败，请稍后重试')
+    isLoading.value = false
+  }
+}
+
+// 使用密码加入房间
+const joinRoomWithPassword = async (roomId, password) => {
+  try {
+    isLoading.value = true
+
+    // 调用API加入房间
     const success = await roomStore.joinRoom(roomId, password)
-    
+
     if (success) {
       ElMessage.success('成功加入房间')
+      // 关闭密码对话框
+      showPasswordDialog.value = false
       // 导航到房间详情页
       router.push(`/room/${roomId}`)
     } else {
@@ -137,6 +156,25 @@ const joinRoom = async (roomId) => {
   } finally {
     isLoading.value = false
   }
+}
+
+// 处理密码提交
+const handlePasswordSubmit = () => {
+  if (!passwordInput.value) {
+    ElMessage.warning('请输入房间密码')
+    return
+  }
+
+  if (currentRoomId.value) {
+    joinRoomWithPassword(currentRoomId.value, passwordInput.value)
+  }
+}
+
+// 处理密码取消
+const handlePasswordCancel = () => {
+  showPasswordDialog.value = false
+  passwordInput.value = ''
+  currentRoomId.value = null
 }
 
 // 查看更多房间
@@ -152,15 +190,15 @@ const viewMyRooms = () => {
 // 添加时间格式化函数
 const formatTime = (timestamp) => {
   if (!timestamp) return '未知时间'
-  
+
   const now = new Date()
   const date = new Date(timestamp)
   const diff = Math.floor((now - date) / 1000) // 差异（秒）
-  
+
   if (diff < 60) return '刚刚'
   if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
   if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
-  
+
   return date.toLocaleDateString()
 }
 </script>
@@ -177,10 +215,35 @@ const formatTime = (timestamp) => {
     </section>
 
     <!-- 创建房间模态框 -->
-    <CreateRoomModal 
-      v-model:visible="showCreateRoomModal" 
+    <CreateRoomModal
+      v-model:visible="showCreateRoomModal"
       @created="handleRoomCreated"
     />
+
+    <!-- 密码输入对话框 -->
+    <el-dialog
+      v-model="showPasswordDialog"
+      title="输入房间密码"
+      width="30%"
+      :close-on-click-modal="false"
+    >
+      <el-form>
+        <el-form-item label="房间密码" :label-width="'80px'">
+          <el-input
+            v-model="passwordInput"
+            placeholder="请输入房间密码"
+            show-password
+            @keyup.enter="handlePasswordSubmit"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handlePasswordCancel">取消</el-button>
+          <el-button type="primary" @click="handlePasswordSubmit">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
 
     <!-- 热门房间 -->
     <div class="row">
@@ -205,25 +268,25 @@ const formatTime = (timestamp) => {
                   </div>
                   <div class="room-players">
                     <template v-if="room.players && room.players.length > 0">
-                      <img v-for="(player, index) in room.players.slice(0, 5)" 
-                           :key="index" 
-                           :src="player.avatar || getChampionIcon(index)" 
-                           alt="玩家头像" 
+                      <img v-for="(player, index) in room.players.slice(0, 5)"
+                           :key="index"
+                           :src="player.avatar || getChampionIcon(index)"
+                           alt="玩家头像"
                            class="player-avatar">
                       <span v-if="room.players.length > 5" class="player-more">+{{ room.players.length - 5 }}</span>
                     </template>
                     <span v-else class="no-players">暂无玩家</span>
                   </div>
                   <div class="room-footer">
-                    <a href="javascript:void(0)" 
-                       :class="['btn', room.status === 'waiting' ? 'btn-primary' : 'btn-outline']" 
+                    <a href="javascript:void(0)"
+                       :class="['btn', room.status === 'waiting' ? 'btn-primary' : 'btn-outline']"
                        @click.stop="joinRoom(room.id)">
                       {{ room.status === 'waiting' ? '加入房间' : '观战中+' }}
                     </a>
                   </div>
                 </div>
               </div>
-              
+
               <!-- 无房间显示 -->
               <div class="empty-state" v-else>
                 <div class="empty-icon">🏠</div>
@@ -462,4 +525,4 @@ const formatTime = (timestamp) => {
   color: #a0a0a0;
   font-size: 0.9rem;
 }
-</style> 
+</style>

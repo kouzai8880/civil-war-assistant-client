@@ -15,11 +15,12 @@ if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 // 设置Windows 10+通知的应用程序名称
 if (process.platform === 'win32') app.setAppUserModelId(app.getName())
 
-// 应用单例锁，确保只有一个实例运行
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-  process.exit(0)
-}
+// 允许启动多个实例
+// 注释掉单例锁代码
+// if (!app.requestSingleInstanceLock()) {
+//   app.quit()
+//   process.exit(0)
+// }
 
 // 应用程序根路径
 const ROOT_PATH = {
@@ -130,7 +131,9 @@ async function createWindow() {
     win.loadFile(join(ROOT_PATH.dist, 'index.html'))
   } else {
     // 开发模式下，使用Vite开发服务器
-    win.loadURL('http://localhost:3001')
+    // 使用环境变量中的端口或默认端口3001
+    const port = process.env.VITE_PORT || '3001'
+    win.loadURL(`http://localhost:${port}`)
     // 打开开发者工具 - 默认关闭
     // 如果需要打开开发者工具，可以取消下面这行的注释
     // win.webContents.openDevTools()
@@ -438,14 +441,14 @@ app.on('activate', () => {
   }
 })
 
-// 处理第二个实例启动
-app.on('second-instance', () => {
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
-  }
-})
+// 已禁用单例锁，不需要处理第二个实例启动
+// app.on('second-instance', () => {
+//   if (win) {
+//     if (win.isMinimized()) win.restore()
+//     win.show()
+//     win.focus()
+//   }
+// })
 
 // 应用退出前清理
 app.on('before-quit', () => {

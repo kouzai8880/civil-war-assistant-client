@@ -17165,10 +17165,6 @@ class LCUClient {
 createRequire(import.meta.url);
 if (release().startsWith("6.1")) app.disableHardwareAcceleration();
 if (process.platform === "win32") app.setAppUserModelId(app.getName());
-if (!app.requestSingleInstanceLock()) {
-  app.quit();
-  process.exit(0);
-}
 const ROOT_PATH = {
   // /dist
   dist: join(process.cwd(), "dist"),
@@ -17266,7 +17262,8 @@ async function createWindow() {
   if (app.isPackaged) {
     win.loadFile(join(ROOT_PATH.dist, "index.html"));
   } else {
-    win.loadURL("http://localhost:3001");
+    const port = process.env.VITE_PORT || "3001";
+    win.loadURL(`http://localhost:${port}`);
   }
   win.on("close", (event) => {
     if (!isQuitting) {
@@ -17508,13 +17505,6 @@ app.on("activate", () => {
     createWindow();
   } else {
     win.show();
-  }
-});
-app.on("second-instance", () => {
-  if (win) {
-    if (win.isMinimized()) win.restore();
-    win.show();
-    win.focus();
   }
 });
 app.on("before-quit", () => {

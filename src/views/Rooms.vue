@@ -33,6 +33,11 @@ const searchForm = ref({
 // 创建房间对话框
 const showCreateRoomModal = ref(false)
 
+// 密码输入对话框
+const showPasswordDialog = ref(false)
+const passwordInput = ref('')
+const currentRoom = ref(null)
+
 // 房间状态选项
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -59,7 +64,7 @@ const playerCountOptions = [
 
 // 常用的英雄头像列表，用于随机分配
 const championIcons = [
-  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius', 
+  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius',
   'Ezreal', 'Garen', 'Jinx', 'Lux', 'Malphite',
   'Nami', 'Syndra', 'Thresh', 'Yasuo', 'Zed'
 ]
@@ -131,47 +136,60 @@ const joinRoom = async (room) => {
     ElMessage.warning('该房间不在等待状态，无法加入')
     return
   }
-  
+
   if (room.players && room.players.length >= room.playerCount) {
     ElMessage.warning('该房间已满，无法加入')
     return
   }
-  
+
   console.log('准备加入房间:', room.id, room.name)
-  
+
   try {
     isLoading.value = true
-    
+
     // 检查用户是否已经在房间中（作为玩家或观众）
     const isAlreadyInRoom = room.players && room.players.some(player => player.userId === userStore.userId);
     const isSpectator = room.spectators && room.spectators.some(spectator => spectator.userId === userStore.userId);
-    
+
     if (isAlreadyInRoom || isSpectator) {
       console.log('用户已在房间中，直接跳转到房间详情页');
       router.push(`/room/${room.id}`);
       return;
     }
-    
+
     // 检查房间是否需要密码
-    let password = null;
     if (room.hasPassword) {
-      // 如果需要密码，弹出密码输入框
-      // 这里简化处理，实际应该用ElementUI的输入框组件
-      password = prompt('请输入房间密码:');
-      if (!password) {
-        // 用户取消了输入
-        isLoading.value = false;
-        return;
-      }
+      // 如果需要密码，弹出密码输入对话框
+      currentRoom.value = room;
+      passwordInput.value = '';
+      showPasswordDialog.value = true;
+      isLoading.value = false;
+      return;
     }
-    
-    // 调用API加入房间，只传递密码参数
-    const success = await roomStore.joinRoom(room.id, password)
-    
+
+    // 如果不需要密码，直接加入房间
+    await joinRoomWithPassword(room.id, null);
+  } catch (error) {
+    console.error('加入房间失败:', error)
+    ElMessage.error(error.message || '加入房间失败，请稍后重试')
+    isLoading.value = false
+  }
+}
+
+// 使用密码加入房间
+const joinRoomWithPassword = async (roomId, password) => {
+  try {
+    isLoading.value = true
+
+    // 调用API加入房间
+    const success = await roomStore.joinRoom(roomId, password)
+
     if (success) {
       ElMessage.success('成功加入房间')
+      // 关闭密码对话框
+      showPasswordDialog.value = false
       // 导航到房间详情页
-      router.push(`/room/${room.id}`)
+      router.push(`/room/${roomId}`)
     } else {
       throw new Error(roomStore.error || '加入房间失败')
     }
@@ -183,6 +201,25 @@ const joinRoom = async (room) => {
   }
 }
 
+// 处理密码提交
+const handlePasswordSubmit = () => {
+  if (!passwordInput.value) {
+    ElMessage.warning('请输入房间密码')
+    return
+  }
+
+  if (currentRoom.value) {
+    joinRoomWithPassword(currentRoom.value.id, passwordInput.value)
+  }
+}
+
+// 处理密码取消
+const handlePasswordCancel = () => {
+  showPasswordDialog.value = false
+  passwordInput.value = ''
+  currentRoom.value = null
+}
+
 // 处理创建房间
 const handleCreateRoom = () => {
   if (!userStore.isLoggedIn) {
@@ -190,7 +227,7 @@ const handleCreateRoom = () => {
     router.push('/login')
     return
   }
-  
+
   showCreateRoomModal.value = true
 }
 
@@ -225,11 +262,11 @@ const statusClass = (status) => {
 // 格式化时间
 const formatTime = (time) => {
   if (!time) return '未知时间'
-  
+
   const date = new Date(time)
   const now = new Date()
   const diff = Math.floor((now - date) / 1000 / 60) // 分钟差
-  
+
   if (diff < 1) return '刚刚'
   if (diff < 60) return `${diff}分钟前`
   if (diff < 24 * 60) return `${Math.floor(diff / 60)}小时前`
@@ -240,19 +277,19 @@ const formatTime = (time) => {
 const getPageList = () => {
   const totalPages = Math.ceil(pagination.value.total / pagination.value.pageSize)
   const current = pagination.value.current
-  
+
   if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, i) => i + 1)
   }
-  
+
   if (current <= 3) {
     return [1, 2, 3, 4, 5]
   }
-  
+
   if (current >= totalPages - 2) {
     return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
   }
-  
+
   return [current - 2, current - 1, current, current + 1, current + 2]
 }
 </script>
@@ -284,7 +321,7 @@ const getPageList = () => {
         <button class="btn btn-primary" @click="handleCreateRoom">创建房间</button>
       </div>
     </div>
-    
+
     <!-- 房间列表 -->
     <div class="room-list-grid" v-loading="isLoading">
       <div v-for="room in rooms" :key="room.id" class="room-card">
@@ -315,10 +352,10 @@ const getPageList = () => {
         </div>
         <div class="room-card-players">
           <div class="player-avatars">
-            <img v-for="(player, index) in (room.players || []).slice(0, 5)" 
-                 :key="index" 
-                 :src="player.avatar || getChampionIcon(index)" 
-                 alt="玩家头像" 
+            <img v-for="(player, index) in (room.players || []).slice(0, 5)"
+                 :key="index"
+                 :src="player.avatar || getChampionIcon(index)"
+                 alt="玩家头像"
                  class="player-avatar">
             <span v-if="room.players && room.players.length > 5" class="more-players">+{{ room.players.length - 5 }}</span>
           </div>
@@ -340,13 +377,13 @@ const getPageList = () => {
         </div>
       </div>
     </div>
-    
+
     <!-- 分页 -->
     <div class="pagination">
       <button class="pagination-btn" @click="handlePageChange(pagination.current - 1)" :disabled="pagination.current <= 1">&laquo;</button>
-      <button 
-        v-for="page in getPageList()" 
-        :key="page" 
+      <button
+        v-for="page in getPageList()"
+        :key="page"
         :class="['pagination-btn', { active: page === pagination.current }]"
         @click="handlePageChange(page)"
       >
@@ -354,12 +391,37 @@ const getPageList = () => {
       </button>
       <button class="pagination-btn" @click="handlePageChange(pagination.current + 1)" :disabled="pagination.current >= Math.ceil(pagination.total / pagination.pageSize)">&raquo;</button>
     </div>
-    
+
     <!-- 创建房间对话框 -->
     <CreateRoomModal
       v-model:visible="showCreateRoomModal"
       @created="handleRoomCreated"
     />
+
+    <!-- 密码输入对话框 -->
+    <el-dialog
+      v-model="showPasswordDialog"
+      title="输入房间密码"
+      width="30%"
+      :close-on-click-modal="false"
+    >
+      <el-form>
+        <el-form-item label="房间密码" :label-width="'80px'">
+          <el-input
+            v-model="passwordInput"
+            placeholder="请输入房间密码"
+            show-password
+            @keyup.enter="handlePasswordSubmit"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="handlePasswordCancel">取消</el-button>
+          <el-button type="primary" @click="handlePasswordSubmit">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -586,4 +648,4 @@ const getPageList = () => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-</style> 
+</style>

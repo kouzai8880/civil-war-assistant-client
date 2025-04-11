@@ -527,23 +527,34 @@ export const roomApi = {
 
   // 加入房间
   joinRoom: async (roomId, userData = {}) => {
-    console.log('API方法调用: roomApi.joinRoom', { roomId });
+    console.log('API方法调用: roomApi.joinRoom', { roomId, userData });
 
-    // 使用 WebSocket 加入房间
-    const socket = getSocket();
-    if (!socket) {
-      throw new Error('WebSocket未连接');
-    }
+    try {
+      // 无论有没有密码，都使用REST API加入房间
+      console.log('使用REST API加入房间:', { roomId, hasPassword: !!userData.password });
+      const response = await apiClient.post(`/rooms/${roomId}/join`, userData);
+      console.log('加入房间成功, 响应:', response.data);
 
-    return new Promise((resolve, reject) => {
-      socket.emit('joinRoom', { roomId, ...userData }, (response) => {
-        if (response.error) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
+      // 加入成功后，使用WebSocket发送通知
+      try {
+        const socket = getSocket();
+        if (socket && socket.connected) {
+          console.log('发送WebSocket通知，已加入房间:', roomId);
+          socket.emit('roomJoined', { roomId });
         }
-      });
-    });
+      } catch (wsError) {
+        console.warn('WebSocket通知失败，但不影响加入房间:', wsError);
+      }
+
+      return {
+        status: response.status || 'success',
+        data: response.data,
+        message: response.message || '已成功加入房间'
+      };
+    } catch (error) {
+      console.error('加入房间API调用失败:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   // 从观众席加入玩家列表

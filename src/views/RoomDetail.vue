@@ -109,7 +109,7 @@ const hasJoinedVoice = ref(false)
 
 // 常用的英雄头像列表，用于随机分配给玩家
 const championIcons = [
-  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius', 
+  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius',
   'Ezreal', 'Garen', 'Jinx', 'Lux', 'Malphite',
   'Nami', 'Syndra', 'Thresh', 'Yasuo', 'Zed',
   'Akali', 'Ekko', 'Fiora', 'Irelia', 'Jhin',
@@ -141,10 +141,10 @@ const pickedCharacters = ref([])
 // 测试用 - 模拟房间状态设置
 const setRoomPhase = (phase) => {
   if (!room.value) return
-  
+
   // 创建一个临时的房间对象
   const updatedRoom = {...room.value, status: phase}
-  
+
   // 如果是选人阶段，设置两个队长
   if (phase === 'picking') {
     // 确保有两个队伍
@@ -154,16 +154,16 @@ const setRoomPhase = (phase) => {
         { id: 2, name: '二队', side: null }
       ]
     }
-    
+
     // 确保players数组已初始化
     if (!updatedRoom.players) {
       updatedRoom.players = [];
     }
-    
+
     // 分配队长
     let teamOneCaptainSet = false;
     let teamTwoCaptainSet = false;
-    
+
     updatedRoom.players = updatedRoom.players.map(player => {
       if (player.teamId === 1 && !teamOneCaptainSet) {
         player.isCaptain = true;
@@ -176,19 +176,19 @@ const setRoomPhase = (phase) => {
       }
       return player;
     })
-    
+
     // 确定使用的BP模式
     const mode = updatedRoom.pickMode || '12221';
-    
+
     // 重置选人状态
     pickingPhase.value = {
       currentPick: 1,
       currentTeam: 1,
       pickPattern: mode === '12221' ? [1, 2, 2, 2, 1] : [1, 2, 2, 1, 1]
     }
-    
+
     pickedCharacters.value = []
-    
+
     addSystemMessage('选人阶段开始，由一队队长开始选择队员')
   } else if (phase === 'side-picking') {
     if (!updatedRoom.teams || updatedRoom.teams.length < 2) {
@@ -197,12 +197,12 @@ const setRoomPhase = (phase) => {
         { id: 2, name: '二队', side: null }
       ]
     }
-    
+
     // 确保players数组已初始化
     if (!updatedRoom.players) {
       updatedRoom.players = [];
     }
-    
+
     // 确保当前用户是一队队长
     let userIsTeamOneCaptain = false;
     updatedRoom.players = updatedRoom.players.map(player => {
@@ -215,13 +215,13 @@ const setRoomPhase = (phase) => {
       }
       return player;
     });
-    
+
     // 如果用户不在玩家列表中，添加他们
     if (!userIsTeamOneCaptain && currentUserId.value) {
       if (!updatedRoom.players) {
         updatedRoom.players = [];
       }
-      
+
       updatedRoom.players.push({
         userId: currentUserId.value,
         username: userStore.username,
@@ -231,7 +231,7 @@ const setRoomPhase = (phase) => {
         status: 'ready'
       });
     }
-    
+
     // 确保有一些玩家被选择了
     if (pickedCharacters.value.length === 0) {
       // 为两个队伍各添加几个角色
@@ -245,7 +245,7 @@ const setRoomPhase = (phase) => {
         });
       }
     }
-    
+
     addSystemMessage('选边阶段开始，由一队队长选择红蓝方')
   } else if (phase === 'waiting-game') {
     updatedRoom.teams[0].side = selectedSide.value === 'red' ? 'red' : 'blue'
@@ -254,7 +254,7 @@ const setRoomPhase = (phase) => {
   } else if (phase === 'gaming') {
     addSystemMessage('游戏已开始！')
   }
-  
+
   // 更新到 roomStore
   roomStore.setCurrentRoom(updatedRoom)
 }
@@ -262,19 +262,19 @@ const setRoomPhase = (phase) => {
 // 选择玩家
 const pickPlayer = (player) => {
   if (!room.value || !isCaptain.value) return
-  
+
   // 检查当前是否轮到该队长选择
   if (pickingPhase.value.currentTeam !== userTeamId.value) {
     ElMessage.warning('不是您的选择回合')
     return
   }
-  
+
   // 检查玩家是否已经被选择
   if (pickedCharacters.value.some(c => c.characterId === player.id)) {
     ElMessage.warning('该玩家已被选择')
     return
   }
-  
+
   // 添加到已选择列表
   pickedCharacters.value.push({
     characterId: player.id,
@@ -283,10 +283,10 @@ const pickPlayer = (player) => {
     teamId: userTeamId.value,
     pickOrder: pickingPhase.value.currentPick
   })
-  
+
   // 添加系统消息
   addSystemMessage(`${userTeamId.value === 1 ? '一' : '二'}队选择了玩家 ${player.name}`)
-  
+
   // 更新选择进度
   updatePickingProgress()
 }
@@ -295,7 +295,7 @@ const pickPlayer = (player) => {
 const updatePickingProgress = () => {
   // 确定使用的BP模式
   const mode = room.value.pickMode || '12221';
-  
+
   // 根据模式设置选人模式
   if (mode === '12221') {
     pickingPhase.value.pickPattern = [1, 2, 2, 2, 1];
@@ -306,7 +306,7 @@ const updatePickingProgress = () => {
 
   const pattern = pickingPhase.value.pickPattern;
   const currentPick = pickingPhase.value.currentPick;
-  
+
   // 检查是否已完成所有选择
   const totalPicks = getTotalPickCount();
   if (pickedCharacters.value.length >= totalPicks) {
@@ -314,10 +314,10 @@ const updatePickingProgress = () => {
     setRoomPhase('side-picking');
     return;
   }
-  
+
   // 更新当前选择信息
   pickingPhase.value.currentPick++;
-  
+
   // 确定下一个选择的队伍
   const pickIndex = Math.floor((currentPick - 1) / 2);
   if (pickIndex < pattern.length) {
@@ -333,7 +333,7 @@ const updatePickingProgress = () => {
       return;
     }
   }
-  
+
   // 添加系统消息
   addSystemMessage(`轮到${pickingPhase.value.currentTeam === 1 ? '一' : '二'}队队长选择玩家`);
 }
@@ -348,12 +348,12 @@ const autoPickForTeam = (teamId) => {
   // 找到所有未选择的玩家
   const selectedIds = pickedCharacters.value.map(c => c.characterId);
   const availablePlayers = characters.value.filter(c => !selectedIds.includes(c.id));
-  
+
   if (availablePlayers.length > 0) {
     // 随机选择一个玩家
     const randomIndex = Math.floor(Math.random() * availablePlayers.length);
     const selectedPlayer = availablePlayers[randomIndex];
-    
+
     // 添加到已选择列表
     pickedCharacters.value.push({
       characterId: selectedPlayer.id,
@@ -362,10 +362,10 @@ const autoPickForTeam = (teamId) => {
       teamId: teamId,
       pickOrder: pickingPhase.value.currentPick
     });
-    
+
     // 添加系统消息
     addSystemMessage(`系统为${teamId === 1 ? '一' : '二'}队自动选择了 ${selectedPlayer.name}`);
-    
+
     // 继续更新选择进度
     updatePickingProgress();
   }
@@ -375,53 +375,33 @@ const autoPickForTeam = (teamId) => {
 const refreshInterval = ref(null)
 
 // 加载房间数据
-onMounted(async () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
-  
+const loadRoomDetail = async () => {
+  if (!roomId.value) return
+
   isLoading.value = true
-  
+
   try {
-    // 先获取房间详情
+    // 获取房间详情
     const roomData = await roomStore.fetchRoomDetail(roomId.value)
-    
+
     if (!roomData) {
       ElMessage.error('房间不存在或已被删除')
       router.push('/rooms')
       return
     }
-    
-    // 检查用户是否已经在房间中
-    const isAlreadyInRoom = roomStore.isUserInRoom(roomData)
-    
-    if (!isAlreadyInRoom) {
-      // 如果用户不在房间中，尝试加入房间
-      const success = await roomStore.joinRoom(roomId.value)
-      
-      if (!success) {
-        ElMessage.error(roomStore.error || '加入房间失败')
-        router.push('/rooms')
-        return
-      }
-    } else {
-      console.log('用户已在房间中，无需再次加入')
-    }
-    
+
     // 初始化聊天消息
     if (roomData.messages && roomData.messages.length > 0) {
       messages.value.public = roomData.messages.filter(msg => !msg.teamId)
       messages.value.team1 = roomData.messages.filter(msg => msg.teamId === 1)
       messages.value.team2 = roomData.messages.filter(msg => msg.teamId === 2)
     }
-    
+
     // 如果房间已经在选人阶段，初始化选人状态
     if (roomData.status === 'picking' && roomData.pickPhase) {
       pickingPhase.value = { ...roomData.pickPhase }
     }
-    
+
     // 如果房间已经在选边阶段，初始化选边状态
     if (roomData.status === 'side-picking') {
       // 如果当前用户是一队队长，显示选边弹窗
@@ -429,12 +409,296 @@ onMounted(async () => {
         sideSelectorVisible.value = true
       }
     }
-    
+
     // 如果房间已经在游戏中，初始化游戏状态
     if (roomData.status === 'gaming') {
       // 这里可以添加游戏状态的初始化逻辑
     }
-    
+
+    return roomData
+  } catch (error) {
+    console.error('加载房间详情失败:', error)
+    ElMessage.error('加载房间详情失败，请稍后重试')
+    return null
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 事件处理函数已经定义在下面
+
+// 设置房间事件监听器
+const setupRoomEventListeners = () => {
+  // 添加事件监听器
+  window.addEventListener('roomJoined', handleRoomJoined)
+  window.addEventListener('roleChanged', handleRoleChanged)
+  window.addEventListener('roomStatusUpdate', handleRoomStatusUpdate)
+  window.addEventListener('spectatorJoined', handleSpectatorJoined)
+  window.addEventListener('playerJoined', handlePlayerJoined)
+  window.addEventListener('spectatorLeft', handleSpectatorLeft)
+  window.addEventListener('playerLeft', handlePlayerLeft)
+  window.addEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
+  window.addEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
+  window.addEventListener('gameStarted', handleGameStarted)
+  window.addEventListener('playerStatusUpdate', handlePlayerStatusUpdate)
+  window.addEventListener('teamUpdate', handleTeamUpdate)
+  window.addEventListener('newMessage', handleNewMessage)
+  window.addEventListener('socketError', handleSocketError)
+  console.log('已添加房间事件监听器')
+}
+
+// 清除房间事件监听器
+const cleanupRoomEventListeners = () => {
+  window.removeEventListener('roomJoined', handleRoomJoined)
+  window.removeEventListener('roleChanged', handleRoleChanged)
+  window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
+  window.removeEventListener('spectatorJoined', handleSpectatorJoined)
+  window.removeEventListener('playerJoined', handlePlayerJoined)
+  window.removeEventListener('spectatorLeft', handleSpectatorLeft)
+  window.removeEventListener('playerLeft', handlePlayerLeft)
+  window.removeEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
+  window.removeEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
+  window.removeEventListener('gameStarted', handleGameStarted)
+  window.removeEventListener('playerStatusUpdate', handlePlayerStatusUpdate)
+  window.removeEventListener('teamUpdate', handleTeamUpdate)
+  window.removeEventListener('newMessage', handleNewMessage)
+  window.removeEventListener('socketError', handleSocketError)
+  console.log('已清除房间事件监听器')
+}
+
+// 各种事件处理函数
+const handleRoomJoined = (event) => {
+  console.log('收到roomJoined事件:', event.detail)
+  if (event.detail && event.detail.status === 'success') {
+    // 如果是当前用户加入房间，不显示提示，因为在操作函数中已经显示了
+    const joinedUserId = event.detail.data?.userId || event.detail.data?.room?.userId
+    if (joinedUserId !== userStore.userId) {
+      ElMessage.success(event.detail.message || '成功加入房间')
+    }
+    refreshRoomDetail()
+  }
+}
+
+const handleRoleChanged = (event) => {
+  console.log('收到roleChanged事件:', event.detail)
+  if (event.detail && event.detail.status === 'success') {
+    // 如果是当前用户角色变更，不显示提示，因为在操作函数中已经显示了
+    const changedUserId = event.detail.data?.userId
+    if (changedUserId !== userStore.userId) {
+      ElMessage.success(event.detail.message || '角色已变更')
+    }
+    refreshRoomDetail()
+  }
+}
+
+// 不再需要handleRoomDetail函数，因为我们现在使用回调函数而不是事件监听
+
+const handleRoomStatusUpdate = (event) => {
+  console.log('收到roomStatusUpdate事件:', event.detail)
+  if (event.detail && event.detail.roomId === roomId.value) {
+    refreshRoomDetail()
+    if (event.detail.status === 'gaming') {
+      ElMessage.success('游戏已开始')
+    } else if (event.detail.status === 'ended') {
+      ElMessage.info('游戏已结束')
+    }
+  }
+}
+
+const handleSpectatorJoined = (event) => {
+  console.log('收到spectatorJoined事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    addSystemMessage(`${event.detail.username || '新观众'} 加入了观众席`)
+    refreshRoomDetail()
+  }
+}
+
+const handlePlayerJoined = (event) => {
+  console.log('收到playerJoined事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    addSystemMessage(`${event.detail.username || '新玩家'} 加入了游戏`)
+    refreshRoomDetail()
+  }
+}
+
+const handleSpectatorLeft = (event) => {
+  console.log('收到spectatorLeft事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    addSystemMessage(`${event.detail.username || '观众'} 离开了观众席`)
+    refreshRoomDetail()
+  }
+}
+
+const handlePlayerLeft = (event) => {
+  console.log('收到playerLeft事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    addSystemMessage(`${event.detail.username || '玩家'} 离开了游戏`)
+    refreshRoomDetail()
+  }
+}
+
+const handleSpectatorMoveToPlayer = (event) => {
+  console.log('收到spectatorMoveToPlayer事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    // 只添加系统消息，不显示提示，因为在操作函数中已经显示了
+    if (event.detail.userId !== userStore.userId) {
+      addSystemMessage(`${event.detail.username || '观众'} 加入了玩家列表`)
+    }
+    refreshRoomDetail()
+  }
+}
+
+const handlePlayerMoveToSpectator = (event) => {
+  console.log('收到playerMoveToSpectator事件:', event.detail)
+  if (event.detail && event.detail.userId) {
+    // 只添加系统消息，不显示提示，因为在操作函数中已经显示了
+    if (event.detail.userId !== userStore.userId) {
+      addSystemMessage(`${event.detail.username || '玩家'} 移动到了观众席`)
+    }
+    refreshRoomDetail()
+  }
+}
+
+const handleGameStarted = (event) => {
+  console.log('收到gameStarted事件:', event.detail)
+  addSystemMessage('游戏开始！祈祷各位玩家游戏愉快')
+  refreshRoomDetail()
+}
+
+const handlePlayerStatusUpdate = (event) => {
+  console.log('收到playerStatusUpdate事件:', event.detail)
+  if (event.detail && event.detail.userId && room.value) {
+    const player = room.value.players?.find(p => p.userId === event.detail.userId)
+    if (player) {
+      if (event.detail.status === 'ready') {
+        addSystemMessage(`${player.username || '玩家'} 已准备就纪`)
+      } else if (event.detail.status === 'not-ready') {
+        addSystemMessage(`${player.username || '玩家'} 取消了准备`)
+      }
+    }
+    refreshRoomDetail()
+  }
+}
+
+const handleTeamUpdate = (event) => {
+  console.log('收到teamUpdate事件:', event.detail)
+  if (event.detail && event.detail.teamId && room.value) {
+    if (event.detail.side) {
+      const team = room.value.teams?.find(t => t.id === event.detail.teamId)
+      if (team) {
+        const sideName = event.detail.side === 'blue' ? '蓝方' : '红方'
+        addSystemMessage(`${team.name || `队伍${team.id}`} 选择了 ${sideName}`)
+      }
+    }
+    refreshRoomDetail()
+  }
+}
+
+const handleNewMessage = (event) => {
+  console.log('收到newMessage事件:', event.detail)
+  if (event.detail) {
+    const message = event.detail
+
+    // 确保所有聊天频道都已初始化
+    if (!messages.value) {
+      messages.value = {
+        public: [],
+        team1: [],
+        team2: []
+      }
+    }
+
+    // 根据消息类型添加到相应频道
+    if (message.channel === 'public' || !message.channel) {
+      if (!messages.value.public) messages.value.public = []
+      messages.value.public.push(message)
+    } else if (message.channel === 'team' && message.teamId) {
+      if (message.teamId === 1) {
+        if (!messages.value.team1) messages.value.team1 = []
+        messages.value.team1.push(message)
+      } else if (message.teamId === 2) {
+        if (!messages.value.team2) messages.value.team2 = []
+        messages.value.team2.push(message)
+      }
+    }
+
+    // 自动滚动到底部
+    nextTick(() => {
+      const chatBox = document.querySelector('.chat-messages')
+      if (chatBox) {
+        chatBox.scrollTop = chatBox.scrollHeight
+      }
+    })
+  }
+}
+
+const handleSocketError = (event) => {
+  console.error('收到socketError事件:', event.detail)
+  if (event.detail && event.detail.message) {
+    ElMessage.error(event.detail.message)
+
+    // 根据错误代码执行不同操作
+    if (event.detail.code === 3001) { // 房间不存在
+      router.push('/rooms')
+    } else if (event.detail.code === 3003) { // 用户不在房间中
+      refreshRoomDetail()
+    } else if (event.detail.code === 3004) { // 密码错误
+      // 可以弹出密码输入框
+    } else if (event.detail.code === 3005) { // 玩家列表已满
+      ElMessage.warning('玩家列表已满，无法加入')
+    }
+  }
+}
+
+// 组件挂载时初始化
+onMounted(async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+
+  isLoading.value = true
+
+  try {
+    // 确保WebSocket连接
+    if (!socketStore.isConnected) {
+      await socketStore.connect()
+    }
+
+    // 先获取房间详情
+    await refreshRoomDetail()
+
+    if (!room.value) {
+      router.push('/rooms')
+      return
+    }
+
+    // 检查用户是否已经在房间中
+    const isAlreadyInRoom = roomStore.isUserInRoom(room.value)
+
+    if (!isAlreadyInRoom) {
+      // 如果用户不在房间中，尝试加入房间
+      console.log(`用户 ${userStore.username} 尝试加入房间 ${roomId.value}...`)
+
+      // 使用REST API加入房间
+      const success = await roomStore.joinRoom(roomId.value)
+
+      if (!success) {
+        ElMessage.error(roomStore.error || '加入房间失败')
+        router.push('/rooms')
+        return
+      }
+
+      // 直接加载房间详情，不再等待WebSocket事件
+      await refreshRoomDetail()
+    } else {
+      console.log('用户已在房间中，无需再次加入')
+    }
+
+    // 设置房间事件监听器，依靠WebSocket通知刷新房间数据
+    setupRoomEventListeners()
+
   } catch (error) {
     console.error('加载房间失败:', error)
     ElMessage.error('加载房间失败，请稍后重试')
@@ -444,48 +708,50 @@ onMounted(async () => {
   }
 })
 
-// 设置定期刷新
+// 不再使用定期刷新，而是依靠WebSocket通知刷新房间数据
+// 这个函数保留但不再使用
 const setupRefreshInterval = () => {
-  // 清除可能已存在的定时器
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value)
-  }
-  
-  // 设置新的定时器，每5秒刷新一次
-  refreshInterval.value = setInterval(() => {
-    if (roomId.value) {
-      console.log('定时刷新房间数据...')
-      roomStore.fetchRoomDetail(roomId.value)
-    }
-  }, 5000)
-  
-  console.log('已设置房间数据定时刷新')
+  console.log('不再使用定期刷新，而是依靠WebSocket通知刷新房间数据')
 }
 
-// 组件卸载时清除定时器
+// 组件卸载时清除事件监听器
 onUnmounted(() => {
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value)
-    console.log('已清除房间数据定时刷新')
-  }
+  // 清除所有房间事件监听器
+  cleanupRoomEventListeners()
 })
 
 // 将用户添加到观众席
 const addUserToSpectators = async () => {
-  if (!room.value || !room.value.spectators || !userStore.userId) return
+  if (!room.value || !userStore.userId) return
 
   try {
-    // 调用加入观众席API
-    const success = await roomStore.joinAsSpectator(roomId.value)
-    
+    console.log(`用户 ${userStore.username} 尝试加入观众席, 房间ID: ${roomId.value}`)
+
+    // 确保 WebSocket 已连接
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        throw new Error('WebSocket连接失败，无法加入观众席')
+      }
+    }
+
+    // 直接使用WebSocket加入观众席
+    const success = socketStore.joinAsSpectator(roomId.value)
+
     if (success) {
-      console.log('成功加入观众席')
-      ElMessage.success('已进入观众席')
-      
+      console.log('成功发送加入观众席事件')
+      ElMessage.success('正在进入观众席...')
+
+      // 等待WebSocket事件处理
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       // 重新加载房间数据以获取最新状态
-      await loadRoomDetail()
+      await refreshRoomDetail()
+
+      // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
-      throw new Error(roomStore.error || '加入观众席失败')
+      throw new Error('发送WebSocket事件失败')
     }
   } catch (error) {
     console.error('加入观众席失败:', error)
@@ -496,29 +762,43 @@ const addUserToSpectators = async () => {
 // 加入队伍
 const joinRoom = async () => {
   if (!room.value) return
-  
+
   // 检查玩家数量是否已满
   if (room.value.players && room.value.players.length >= (room.value.playerCount || 10)) {
     ElMessage.warning('对局已满员')
     return
   }
-  
+
   isLoading.value = true
-  
+
   try {
-    console.log(`用户 ${userStore.username} 正在调用API加入房间 ${roomId.value}...`)
-    
-    // 调用API加入房间（从观众席到玩家列表）
-    const success = await roomStore.joinAsPlayer(roomId.value)
-    
+    console.log(`用户 ${userStore.username} 尝试加入玩家列表, 房间ID: ${roomId.value}`)
+
+    // 确保 WebSocket 已连接
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        throw new Error('WebSocket连接失败，无法加入玩家列表')
+      }
+    }
+
+    // 直接使用WebSocket加入玩家列表
+    const success = socketStore.joinAsPlayer(roomId.value)
+
     if (success) {
-      console.log('成功加入房间，服务端返回的房间数据:', room.value)
-      ElMessage.success('已加入对局')
-      
+      console.log('成功发送加入玩家列表事件')
+      ElMessage.success('正在加入对局...')
+
+      // 等待WebSocket事件处理
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       // 重新加载房间数据以获取最新状态
-      await loadRoomDetail()
+      await refreshRoomDetail()
+
+      // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
-      throw new Error(roomStore.error || '加入房间失败')
+      throw new Error('发送WebSocket事件失败')
     }
   } catch (error) {
     console.error('加入对局失败:', error)
@@ -531,7 +811,7 @@ const joinRoom = async () => {
 // 准备/取消准备
 const toggleReady = async () => {
   if (!room.value) return
-  
+
   try {
     // 找到当前玩家
     const playerIndex = room.value.players.findIndex(p => p.userId === currentUserId.value)
@@ -539,16 +819,16 @@ const toggleReady = async () => {
       ElMessage.warning('您不是队伍成员，无法准备')
       return
     }
-    
+
     // 更新准备状态
     const currentStatus = room.value.players[playerIndex].status
     room.value.players[playerIndex].status = currentStatus === 'ready' ? 'not-ready' : 'ready'
-    
+
     // 添加系统消息
-    const message = currentStatus === 'ready' ? 
-      `${userStore.username} 取消了准备` : 
+    const message = currentStatus === 'ready' ?
+      `${userStore.username} 取消了准备` :
       `${userStore.username} 已准备`
-      
+
     addSystemMessage(message)
   } catch (error) {
     ElMessage.error('操作失败')
@@ -568,19 +848,19 @@ const startPicking = async () => {
     ElMessage.error('房间数据不存在')
     return
   }
-  
+
   if (!isCreator.value) {
     console.error('无法开始选人：不是房主')
     ElMessage.warning('只有房主可以开始选人')
     return
   }
-  
+
   if (!checkAllReady()) {
     console.log('还有玩家未准备，无法开始')
     ElMessage.warning('还有玩家未准备')
     return
   }
-  
+
   try {
     console.log('开始选人阶段...')
     setRoomPhase('picking')
@@ -594,19 +874,19 @@ const startPicking = async () => {
 // 选择角色
 const pickCharacter = (character) => {
   if (!room.value || !isCaptain.value) return
-  
+
   // 检查当前是否轮到该队长选择
   if (pickingPhase.value.currentTeam !== userTeamId.value) {
     ElMessage.warning('不是您的选择回合')
     return
   }
-  
+
   // 检查角色是否已经被选择
   if (pickedCharacters.value.some(c => c.characterId === character.id)) {
     ElMessage.warning('该角色已被选择')
     return
   }
-  
+
   // 添加到已选择列表
   pickedCharacters.value.push({
     characterId: character.id,
@@ -615,13 +895,13 @@ const pickCharacter = (character) => {
     teamId: userTeamId.value,
     pickOrder: pickingPhase.value.currentPick
   })
-  
+
   // 添加系统消息
   addSystemMessage(`${userTeamId.value === 1 ? '一' : '二'}队选择了 ${character.name}`)
-  
+
   // 关闭选择弹窗
   characterPickingVisible.value = false
-  
+
   // 更新选择进度
   updatePickingProgress()
 }
@@ -629,10 +909,10 @@ const pickCharacter = (character) => {
 // 选择红蓝方
 const pickSide = (side) => {
   if (!room.value || !isCaptain.value || userTeamId.value !== 1) return
-  
+
   selectedSide.value = side
   sideSelectorVisible.value = false
-  
+
   // 进入等待游戏阶段
   setRoomPhase('waiting-game')
 }
@@ -644,27 +924,27 @@ const startGame = async () => {
     ElMessage.error('房间数据不存在')
     return
   }
-  
+
   if (!isCreator.value) {
     console.error('无法开始游戏：不是房主')
     ElMessage.warning('只有房主可以开始游戏')
     return
   }
-  
+
   // 检查两队是否有队员
   if (!room.value.teams || room.value.teams.length < 2) {
     console.error('无法开始游戏：队伍数据异常')
     ElMessage.error('队伍数据异常，无法开始游戏')
     return
   }
-  
+
   // 检查是否已选择红蓝方
   if (!room.value.teams[0].side || !room.value.teams[1].side) {
     console.error('无法开始游戏：尚未选择红蓝方')
     ElMessage.warning('请先选择红蓝方')
     return
   }
-  
+
   try {
     console.log('开始游戏...')
     setRoomPhase('gaming')
@@ -683,55 +963,43 @@ const leaveRoom = async () => {
     router.push('/rooms')
     return
   }
-  
+
   if (!userStore.userId) {
     console.error('无法离开房间：用户未登录')
     router.push('/login')
     return
   }
-  
+
   console.log(`${userStore.username} 正在离开房间...`)
-  
+
   try {
-    // 调用API离开房间
-    const success = await roomStore.leaveRoom()
-    
+    // 确保 WebSocket 已连接
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        throw new Error('WebSocket连接失败，无法离开房间')
+      }
+    }
+
+    // 直接使用WebSocket离开房间
+    const success = socketStore.leaveRoom()
+
     if (!success) {
-      throw new Error(roomStore.error || '离开房间失败')
+      throw new Error('发送WebSocket事件失败')
     }
-    
-    // 调用Socket离开房间
-    socketStore.leaveRoom()
-    
-    // 如果是玩家，从玩家列表移除
-    if (room.value?.players) {
-      const playerIndex = room.value.players.findIndex(p => p.userId === userStore.userId)
-      if (playerIndex !== -1) {
-        room.value.players.splice(playerIndex, 1)
-        console.log(`已从玩家列表移除用户 ${userStore.username}`)
-        addSystemMessage(`${userStore.username} 离开了队伍`)
-      }
-    }
-    
-    // 如果是观众，从观众列表移除
-    if (room.value.spectators) {
-      const spectatorIndex = room.value.spectators.findIndex(s => s.userId === userStore.userId)
-      if (spectatorIndex !== -1) {
-        room.value.spectators.splice(spectatorIndex, 1)
-        console.log(`已从观众席移除用户 ${userStore.username}`)
-      }
-    }
-    
-    // 如果是房主且房间中还有其他玩家，将房主转移给第一个玩家
-    if (isCreator.value && room.value.players && room.value.players.length > 0) {
-      const newCreator = room.value.players[0]
-      room.value.creatorId = newCreator.userId
-      console.log(`房主已转移给 ${newCreator.username}`)
-      addSystemMessage(`房主已转移给 ${newCreator.username}`)
-    }
-    
-    console.log('成功离开房间')
-    ElMessage.success('已离开房间')
+
+    console.log('成功发送离开房间事件')
+    ElMessage.success('正在离开房间...')
+
+    // 等待WebSocket事件处理
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // 清除当前房间数据
+    room.value = null
+
+    console.log('成功离开房间，准备返回房间列表')
+    // 不再显示第二次成功提示，因为事件处理中会显示
     router.push('/rooms')
   } catch (error) {
     console.error('离开房间失败', error)
@@ -749,12 +1017,12 @@ const kickPlayer = async (targetUserId, targetUsername) => {
     ElMessage.warning('只有房主才能踢出玩家')
     return
   }
-  
+
   if (targetUserId === userStore.userId) {
     ElMessage.warning('不能踢出自己')
     return
   }
-  
+
   try {
     // 显示确认对话框
     await ElMessageBox.confirm(
@@ -766,21 +1034,34 @@ const kickPlayer = async (targetUserId, targetUsername) => {
         type: 'warning'
       }
     )
-    
-    // 调用API踢出玩家
-    const success = await roomStore.kickPlayer(targetUserId)
-    
+
+    // 确保 WebSocket 已连接
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        throw new Error('WebSocket连接失败，无法踢出玩家')
+      }
+    }
+
+    // 直接使用WebSocket踢出玩家
+    const success = socketStore.kickPlayer(roomId.value, targetUserId)
+
     if (success) {
-      ElMessage.success(`已踢出 ${targetUsername}`)
+      console.log('成功发送踢出玩家事件')
+      ElMessage.success(`正在踢出 ${targetUsername}...`)
+
+      // 等待WebSocket事件处理
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // 重新加载房间数据以获取最新状态
+      await refreshRoomDetail()
+
+      // 不再显示第二次成功提示，因为事件处理中会显示
+      // 但仍然添加系统消息
       addSystemMessage(`房主已将 ${targetUsername} 踢出房间`)
-      
-      // 从玩家列表和观众列表中移除
-      if (room.value.players) {
-        room.value.players = room.value.players.filter(p => p.userId !== targetUserId)
-      }
-      if (room.value.spectators) {
-        room.value.spectators = room.value.spectators.filter(s => s.userId !== targetUserId)
-      }
+
+      // 不再手动更新房间数据，等待WebSocket事件更新
     } else {
       throw new Error(roomStore.error || '踢出玩家失败')
     }
@@ -797,25 +1078,25 @@ const sendMessage = () => {
   if (!chatInput.value.trim()) {
     return
   }
-  
+
   if (!room.value) {
     console.error('无法发送消息：房间数据不存在')
     ElMessage.error('房间数据不存在')
     return
   }
-  
+
   if (!userStore.userId) {
     console.error('无法发送消息：用户未登录')
     ElMessage.error('请先登录')
     return
   }
-  
+
   // 确保消息对象已初始化
   if (!messages.value[activeChat.value]) {
     console.error(`聊天频道 ${activeChat.value} 不存在`)
     messages.value[activeChat.value] = []
   }
-  
+
   try {
     // 构建消息对象
     const newMessage = {
@@ -825,14 +1106,14 @@ const sendMessage = () => {
       content: chatInput.value.trim(),
       time: new Date()
     }
-    
+
     // 根据当前激活的聊天标签发送到对应频道
     messages.value[activeChat.value].push(newMessage)
     console.log(`向 ${activeChat.value} 频道发送消息: ${newMessage.content}`)
-    
+
     // 清空输入框
     chatInput.value = ''
-    
+
     // 自动滚动到底部
     nextTick(() => {
       const chatBox = document.querySelector('.chat-messages')
@@ -856,14 +1137,20 @@ const addSystemMessage = (content) => {
   try {
     // 创建系统消息对象
     const systemMessage = {
-      id: Date.now(),
+      id: Date.now().toString(),
       userId: 'system',
       username: '系统',
       content: content,
       time: new Date(),
-      isSystem: true
+      isSystem: true,
+      // 添加与Socket事件兼容的字段
+      sender: 'system',
+      senderName: '系统',
+      timestamp: new Date().toISOString(),
+      type: 'system',
+      channel: 'public'
     }
-    
+
     // 确保所有聊天频道都已初始化
     if (!messages.value) {
       messages.value = {
@@ -872,17 +1159,19 @@ const addSystemMessage = (content) => {
         team2: []
       }
     }
-    
+
     // 添加到所有聊天频道
     Object.keys(messages.value).forEach(channel => {
       if (!messages.value[channel]) {
         messages.value[channel] = []
       }
-      messages.value[channel].push(systemMessage)
+      // 创建每个频道的副本，以防止引用问题
+      const channelMessage = { ...systemMessage, channel }
+      messages.value[channel].push(channelMessage)
     })
-    
+
     console.log(`系统消息: ${content}`)
-    
+
     // 自动滚动到底部
     nextTick(() => {
       const chatBox = document.querySelector('.chat-messages')
@@ -898,7 +1187,7 @@ const addSystemMessage = (content) => {
 // 切换语音状态
 const toggleVoice = () => {
   hasJoinedVoice.value = !hasJoinedVoice.value
-  
+
   // 添加系统消息
   if (hasJoinedVoice.value) {
     if (room.value.status === 'waiting') {
@@ -983,7 +1272,7 @@ const showStartGameButton = computed(() => {
 // 指示队长是否需要行动的提示文本
 const captainActionText = computed(() => {
   if (!room.value) return ''
-  
+
   if (room.value.status === 'picking') {
     if (isCaptain.value && pickingPhase.value.currentTeam === userTeamId.value) {
       return '轮到您选择角色'
@@ -995,7 +1284,7 @@ const captainActionText = computed(() => {
       return '请选择红方或蓝方'
     }
   }
-  
+
   return ''
 })
 
@@ -1005,14 +1294,14 @@ const activeVoiceTeam = ref(0) // 0表示公共，1表示一队，2表示二队
 // 各队伍的语音参与者
 const teamVoiceParticipants = computed(() => {
   if (!room.value || !hasJoinedVoice.value) return []
-  
+
   // 根据当前选择的队伍语音频道过滤玩家
   if (activeVoiceTeam.value === 0 || room.value.status === 'waiting') {
     return room.value.players.filter(p => p.userId !== currentUserId.value && p.hasJoinedVoice)
   } else {
-    return room.value.players.filter(p => 
-      p.userId !== currentUserId.value && 
-      p.hasJoinedVoice && 
+    return room.value.players.filter(p =>
+      p.userId !== currentUserId.value &&
+      p.hasJoinedVoice &&
       p.teamId === activeVoiceTeam.value
     )
   }
@@ -1021,12 +1310,12 @@ const teamVoiceParticipants = computed(() => {
 // 切换语音队伍
 const switchVoiceTeam = (teamId) => {
   activeVoiceTeam.value = teamId
-  
+
   if (hasJoinedVoice.value) {
     // 如果已经加入语音，则先退出
     hasJoinedVoice.value = false
     addSystemMessage(`${userStore.username} 离开了语音聊天`)
-    
+
     // 然后重新加入新的队伍语音
     setTimeout(() => {
       hasJoinedVoice.value = true
@@ -1060,28 +1349,64 @@ watch(() => room.value?.status, (newStatus) => {
 // 监听路由参数变化，当房间ID变化时重新加载
 watch(() => route.params.id, (newId, oldId) => {
   if (newId !== oldId) {
-    loadRoomDetail()
+    refreshRoomDetail()
   }
 })
 
-// 加载房间详情
-const loadRoomDetail = async () => {
+// 刷新房间详情
+const refreshRoomDetail = async () => {
   if (!roomId.value) {
     console.error('无法加载房间：没有房间ID')
     ElMessage.error('无法加载房间：没有房间ID')
     router.push('/rooms')
     return
   }
-  
+
   isLoading.value = true
-  
+
   try {
-    // 延迟一下，确保 isLoading 状态完全应用
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
     console.log(`正在加载房间详情，ID: ${roomId.value}`)
-    const result = await roomStore.fetchRoomDetail(roomId.value)
-    
+
+    // 确保 WebSocket 已连接
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        throw new Error('WebSocket连接失败，无法获取房间详情')
+      }
+    }
+
+    // 使用Promise包装WebSocket回调
+    const result = await new Promise((resolve, reject) => {
+      // 使用WebSocket获取房间详情
+      const success = socketStore.getRoomDetail(roomId.value, (response) => {
+        if (response.status === 'success') {
+          console.log('成功获取房间详情:', response.data)
+
+          // 处理房间数据
+          const roomData = response.data
+
+          // 确保关键属性总是有值，防止前端报错
+          roomData.players = roomData.players || []
+          roomData.teams = roomData.teams || []
+          roomData.spectators = roomData.spectators || []
+          roomData.messages = roomData.messages || []
+
+          // 更新当前房间数据
+          room.value = roomData
+
+          resolve(roomData)
+        } else {
+          console.error('获取房间详情失败:', response.message)
+          reject(new Error(response.message || '获取房间详情失败'))
+        }
+      })
+
+      if (!success) {
+        reject(new Error('发送WebSocket事件失败'))
+      }
+    })
+
     if (!result || !room.value) {
       console.error('房间不存在或无法加载房间数据')
       ElMessage.error('无法加载房间详情，可能不存在或已关闭')
@@ -1091,34 +1416,16 @@ const loadRoomDetail = async () => {
       }, 1500);
       return;
     }
-    
+
     console.log('房间详情加载成功:', room.value)
-    
-    // 确保有观众列表
-    if (!room.value.spectators) {
-      room.value.spectators = []
-    }
-    
-    // 确保有队伍列表
-    if (!room.value.teams) {
-      room.value.teams = [
-        { id: 1, name: '一队', side: null, players: [] },
-        { id: 2, name: '二队', side: null, players: [] }
-      ]
-    }
-    
-    // 确保玩家列表存在
-    if (!room.value.players) {
-      room.value.players = []
-    }
-    
+
     // 检查用户是否已经在房间中
     const isAlreadyInRoom = roomStore.isUserInRoom(room.value)
-    
+
     if (!isAlreadyInRoom) {
       // 如果用户不在房间中，尝试加入房间
       const success = await roomStore.joinRoom(roomId.value)
-      
+
       if (!success) {
         ElMessage.error(roomStore.error || '加入房间失败')
         setTimeout(() => {
@@ -1129,37 +1436,37 @@ const loadRoomDetail = async () => {
     } else {
       console.log('用户已在房间中，无需再次加入')
     }
-    
-    // 确保当前用户在房间中，如果不在，添加到观众席
+
+    // 检查用户是否在房间中，但不自动添加到观众席
+    // 这是为了避免在用户刚加入房间时自动将其添加到观众席
     if (currentUserId.value) {
       const currentPlayer = room.value.players.find(p => p.userId === currentUserId.value)
       const currentSpectator = room.value.spectators.find(s => s.userId === currentUserId.value)
-      
+
       if (!currentPlayer && !currentSpectator) {
-        // 将用户添加到观众席
-        addUserToSpectators()
+        console.log('用户无法在房间中找到，但不自动添加到观众席')
+        // 不自动添加到观众席，而是显示一个提示
+        ElMessage.info('您当前不在房间中，可以点击加入按钮加入房间')
       }
     }
-    
+
     // 如果房间状态为游戏中，但没有队伍信息，初始化队伍信息
     if (room.value.status === 'in_progress' && (!room.value.teams || room.value.teams.length === 0)) {
       // 初始化队伍数据
       initializeTeamsData()
     }
-    
+
   } catch (error) {
     console.error('加载房间失败', error);
     ElMessage.error(roomStore.error || '加载房间详情失败，请稍后重试')
-    
+
     // 如果房间加载失败，返回到房间列表
     setTimeout(() => {
       router.push('/rooms')
     }, 1500);
   } finally {
-    // 延迟关闭加载状态，确保有足够的时间显示加载动画
-    setTimeout(() => {
-      isLoading.value = false
-    }, 500);
+    // 立即关闭加载状态，不再添加人为延迟
+    isLoading.value = false
   }
 }
 
@@ -1178,7 +1485,7 @@ const loadRoomDetail = async () => {
                 {{ statusText(room.status) }}
               </div>
             </div>
-            
+
             <div class="room-info-bar">
               <div class="room-info-item">
                 <div class="info-label">玩家数量:</div>
@@ -1187,7 +1494,7 @@ const loadRoomDetail = async () => {
                   <span>{{ room.players.length }}/{{ room.playerCount }}</span>
                 </div>
               </div>
-              
+
               <div class="room-info-item">
                 <div class="info-label">游戏模式:</div>
                 <div class="info-content">
@@ -1195,12 +1502,12 @@ const loadRoomDetail = async () => {
                   <span>{{ room.gameType || 'LOL' }}</span>
                 </div>
               </div>
-              
+
               <div class="room-info-item">
                 <div class="info-label">BP模式:</div>
                 <div class="info-content">{{ room.pickMode || '队长BP(12211)' }}</div>
               </div>
-              
+
               <div class="room-info-item">
                 <div class="info-label">创建时间:</div>
                 <div class="info-content">
@@ -1209,12 +1516,12 @@ const loadRoomDetail = async () => {
                 </div>
               </div>
             </div>
-            
+
             <div class="room-description" v-if="room.description">
               <h3>房间描述</h3>
               <p>{{ room.description }}</p>
             </div>
-            
+
             <!-- 测试导航按钮 -->
             <div class="test-buttons">
               <h4>测试导航按钮</h4>
@@ -1226,7 +1533,7 @@ const loadRoomDetail = async () => {
                 <el-button size="small" @click="setRoomPhase('gaming')">游戏中</el-button>
               </div>
             </div>
-            
+
             <!-- 队长提示 -->
             <div class="captain-prompt" v-if="captainActionText">
               <el-alert
@@ -1236,66 +1543,66 @@ const loadRoomDetail = async () => {
                 show-icon
               />
             </div>
-            
+
             <!-- 房间操作按钮 -->
             <div class="room-actions">
               <!-- 如果是队伍成员，显示准备按钮 -->
-              <el-button 
-                v-if="!isSpectator && room.status === 'waiting'" 
+              <el-button
+                v-if="!isSpectator && room.status === 'waiting'"
                 :type="isReady ? 'warning' : 'success'"
                 @click="toggleReady"
                 class="action-btn"
               >
                 {{ isReady ? '取消准备' : '准备' }}
               </el-button>
-              
+
               <!-- 房主可以开始选人 -->
-              <el-button 
-                v-if="canStartPicking" 
+              <el-button
+                v-if="canStartPicking"
                 type="primary"
                 @click="startPicking"
                 class="action-btn"
               >
                 开始选人
               </el-button>
-              
+
               <!-- 队长选择角色按钮 -->
-              <el-button 
-                v-if="showPickCharacterButton" 
+              <el-button
+                v-if="showPickCharacterButton"
                 type="warning"
                 @click="characterPickingVisible = true"
                 class="action-btn"
               >
                 选择角色
               </el-button>
-              
+
               <!-- 一队队长选择红蓝方按钮 -->
-              <el-button 
-                v-if="showPickSideButton" 
+              <el-button
+                v-if="showPickSideButton"
                 type="warning"
                 @click="sideSelectorVisible = true"
                 class="action-btn"
               >
                 选择红蓝方
               </el-button>
-              
+
               <!-- 房主可以开始游戏 -->
-              <el-button 
-                v-if="showStartGameButton" 
+              <el-button
+                v-if="showStartGameButton"
                 type="success"
                 @click="startGame"
                 class="action-btn"
               >
                 开始游戏
               </el-button>
-              
+
               <!-- 离开房间按钮 -->
               <el-button type="danger" @click="leaveRoom" class="action-btn">
                 离开房间
               </el-button>
             </div>
           </div>
-          
+
           <div class="main-content" :class="{'sidebar-collapsed': sidebarCollapsed}">
             <!-- 侧边栏(观众和语音) -->
             <div class="sidebar">
@@ -1303,15 +1610,15 @@ const loadRoomDetail = async () => {
                 <i class="el-icon-arrow-right" v-if="sidebarCollapsed"></i>
                 <i class="el-icon-arrow-left" v-else></i>
               </div>
-              
+
               <!-- 观众席移到顶部 -->
               <div class="spectators-sidebar">
                 <div class="card-header">
                   <h2 class="section-title">观众席 ({{ room.spectators?.length || 0 }})</h2>
-                  
+
                   <div class="header-buttons">
                     <!-- 如果当前用户在玩家列表中，显示加入观众席按钮 -->
-                    <el-button 
+                    <el-button
                       v-if="!isSpectator && room.status === 'waiting'"
                       type="primary"
                       size="small"
@@ -1322,39 +1629,39 @@ const loadRoomDetail = async () => {
                     </el-button>
                   </div>
                 </div>
-                
+
                 <div class="spectators-sidebar-list">
                   <div v-for="(spectator, index) in room.spectators || []" :key="spectator.userId" class="spectator-sidebar-item">
                     <img :src="spectator.avatar || getChampionIcon(index + 15)" alt="观众头像" class="spectator-avatar">
                     <span class="spectator-name">{{ spectator.username }}</span>
                     <!-- 添加踢出按钮 -->
-                    <el-button 
+                    <el-button
                       v-if="isCreator && spectator.userId !== userStore.userId"
-                      type="danger" 
-                      size="small" 
+                      type="danger"
+                      size="small"
                       @click="kickPlayer(spectator.userId, spectator.username)"
                       :icon="Delete"
                     >
                       踢出
                     </el-button>
                   </div>
-                  
+
                   <div v-if="!room.spectators || room.spectators.length === 0" class="empty-spectators-sidebar">
                     暂无观众
                   </div>
                 </div>
               </div>
-              
+
               <!-- 语音区域 -->
               <div class="voice-container">
                 <div class="card-header">
                   <h2 class="section-title">
-                    {{ room.status === 'waiting' || activeVoiceTeam === 0 ? '公共语音' : 
+                    {{ room.status === 'waiting' || activeVoiceTeam === 0 ? '公共语音' :
                        activeVoiceTeam === 1 ? '一队语音' : '二队语音' }}
                   </h2>
                   <div class="voice-controls">
-                    <button 
-                      class="btn-mic" 
+                    <button
+                      class="btn-mic"
                       :class="{'active': hasJoinedVoice}"
                     >
                       🎤
@@ -1362,32 +1669,32 @@ const loadRoomDetail = async () => {
                     <button class="btn-speaker active">🔊</button>
                   </div>
                 </div>
-                
+
                 <!-- 选人阶段以后的状态显示队伍语音选择 -->
                 <div v-if="room.status !== 'waiting'" class="team-voice-tabs">
-                  <div 
-                    class="team-voice-tab" 
+                  <div
+                    class="team-voice-tab"
                     :class="{'active': activeVoiceTeam === 0}"
                     @click="switchVoiceTeam(0)"
                   >
                     公共语音
                   </div>
-                  <div 
-                    class="team-voice-tab" 
+                  <div
+                    class="team-voice-tab"
                     :class="{'active': activeVoiceTeam === 1}"
                     @click="switchVoiceTeam(1)"
                   >
                     一队语音
                   </div>
-                  <div 
-                    class="team-voice-tab" 
+                  <div
+                    class="team-voice-tab"
                     :class="{'active': activeVoiceTeam === 2}"
                     @click="switchVoiceTeam(2)"
                   >
                     二队语音
                   </div>
                 </div>
-                
+
                 <div class="voice-participants">
                   <div class="voice-participant" :class="{'speaking': hasJoinedVoice}">
                     <img :src="userStore.avatar || getChampionIcon(8)" alt="您的头像" class="voice-avatar">
@@ -1400,9 +1707,9 @@ const loadRoomDetail = async () => {
                     <div class="voice-indicator"></div>
                   </div>
                 </div>
-                
-                <button 
-                  class="btn join-voice-btn" 
+
+                <button
+                  class="btn join-voice-btn"
                   :class="hasJoinedVoice ? 'btn-danger' : 'btn-primary'"
                   @click="toggleVoice"
                 >
@@ -1410,7 +1717,7 @@ const loadRoomDetail = async () => {
                 </button>
               </div>
             </div>
-            
+
             <!-- 主要内容区域 -->
             <div class="content-area">
               <!-- 分割成两个部分：主体内容和聊天区域 -->
@@ -1424,10 +1731,10 @@ const loadRoomDetail = async () => {
                       <div class="section-card players-container" v-if="room.status === 'waiting'">
                         <div class="card-header">
                           <h2 class="section-title">玩家列表 ({{ room.players?.length || 0 }}/10)</h2>
-                          
+
                           <div class="header-buttons">
                             <!-- 如果当前用户是观众且队伍未满，显示加入队伍按钮 -->
-                            <el-button 
+                            <el-button
                               v-if="isSpectator && room.status === 'waiting' && !isTeamFull"
                               type="success"
                               size="small"
@@ -1438,32 +1745,32 @@ const loadRoomDetail = async () => {
                             </el-button>
                           </div>
                         </div>
-                        
+
                         <div class="player-grid">
                           <!-- 显示已加入的玩家 -->
-                          <div 
-                            v-for="player in room.players || []" 
+                          <div
+                            v-for="player in room.players || []"
                             :key="player.userId"
                             class="player-card"
                           >
                             <img :src="player.avatar || getChampionIcon(index + 9)" alt="玩家头像" class="player-avatar">
-                            
+
                             <div class="player-info">
                               <div class="player-name">
                                 {{ player.username }}
                                 <span v-if="player.userId === room.creatorId" class="player-badge creator">房主</span>
                               </div>
-                               
+
                               <div class="player-status" :class="player.status === 'ready' ? 'online' : 'afk'">
                                 {{ player.status === 'ready' ? '已准备' : '未准备' }}
                               </div>
                             </div>
-                            
+
                             <!-- 添加踢出按钮 -->
-                            <el-button 
+                            <el-button
                               v-if="isCreator && player.userId !== userStore.userId"
-                              type="danger" 
-                              size="small" 
+                              type="danger"
+                              size="small"
                               class="kick-button"
                               @click="kickPlayer(player.userId, player.username)"
                               :icon="Delete"
@@ -1471,10 +1778,10 @@ const loadRoomDetail = async () => {
                               踢出
                             </el-button>
                           </div>
-                          
+
                           <!-- 空位 -->
-                          <div 
-                            v-for="n in (10 - (room.players?.length || 0))" 
+                          <div
+                            v-for="n in (10 - (room.players?.length || 0))"
                             :key="`empty-slot-${n}`"
                             class="empty-slot"
                           >
@@ -1485,7 +1792,7 @@ const loadRoomDetail = async () => {
                       </div>
                     </div>
                   </template>
-                  
+
                   <!-- 选人阶段 -->
                   <template v-else-if="room.status === 'picking'">
                     <div class="room-body picking-phase">
@@ -1497,7 +1804,7 @@ const loadRoomDetail = async () => {
                             ({{ pickingPhase.currentTeam === 1 ? '一队选择' : '二队选择' }})
                           </div>
                         </div>
-                        
+
                         <div class="pick-content-container">
                           <!-- 队伍区域 -->
                           <div class="teams-container">
@@ -1508,11 +1815,11 @@ const loadRoomDetail = async () => {
                                   <h3 class="team-name">一队</h3>
                                   <span v-if="pickingPhase.currentTeam === 1" class="current-pick-status">正在选人</span>
                                 </div>
-                                
+
                                 <div class="team-players-grid">
                                   <!-- 队长位置 -->
-                                  <div 
-                                    v-for="player in (room.players || []).filter(p => p.teamId === 1 && p.isCaptain)" 
+                                  <div
+                                    v-for="player in (room.players || []).filter(p => p.teamId === 1 && p.isCaptain)"
                                     :key="player.userId"
                                     class="team-captain"
                                   >
@@ -1520,10 +1827,10 @@ const loadRoomDetail = async () => {
                                     <img :src="player.avatar || getChampionIcon(index + 10)" alt="队长头像" class="captain-avatar">
                                     <div class="captain-name">{{ player.username }}</div>
                                   </div>
-                                  
+
                                   <!-- 队员位置（已选择的玩家） -->
-                                  <div 
-                                    v-for="char in pickedCharacters.filter(c => c.teamId === 1)" 
+                                  <div
+                                    v-for="char in pickedCharacters.filter(c => c.teamId === 1)"
                                     :key="char.characterId"
                                     class="picked-player"
                                   >
@@ -1531,10 +1838,10 @@ const loadRoomDetail = async () => {
                                     <img :src="char.characterAvatar" :alt="char.characterName" class="picked-avatar">
                                     <div class="picked-name">{{ char.characterName }}</div>
                                   </div>
-                                  
+
                                   <!-- 空位 -->
-                                  <div 
-                                    v-for="n in (5 - (room.players || []).filter(p => p.teamId === 1 && p.isCaptain).length - pickedCharacters.filter(c => c.teamId === 1).length)" 
+                                  <div
+                                    v-for="n in (5 - (room.players || []).filter(p => p.teamId === 1 && p.isCaptain).length - pickedCharacters.filter(c => c.teamId === 1).length)"
                                     :key="`empty-pick-1-${n}`"
                                     class="empty-pick"
                                   >
@@ -1543,18 +1850,18 @@ const loadRoomDetail = async () => {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <!-- 二队 -->
                               <div class="team-blue-section" :class="{'active-team': pickingPhase.currentTeam === 2}">
                                 <div class="team-info">
                                   <h3 class="team-name">二队</h3>
                                   <span v-if="pickingPhase.currentTeam === 2" class="current-pick-status">正在选人</span>
                                 </div>
-                                
+
                                 <div class="team-players-grid">
                                   <!-- 队长位置 -->
-                                  <div 
-                                    v-for="player in (room.players || []).filter(p => p.teamId === 2 && p.isCaptain)" 
+                                  <div
+                                    v-for="player in (room.players || []).filter(p => p.teamId === 2 && p.isCaptain)"
                                     :key="player.userId"
                                     class="team-captain"
                                   >
@@ -1562,10 +1869,10 @@ const loadRoomDetail = async () => {
                                     <img :src="player.avatar || getChampionIcon(index + 10)" alt="队长头像" class="captain-avatar">
                                     <div class="captain-name">{{ player.username }}</div>
                                   </div>
-                                  
+
                                   <!-- 队员位置（已选择的玩家） -->
-                                  <div 
-                                    v-for="char in pickedCharacters.filter(c => c.teamId === 2)" 
+                                  <div
+                                    v-for="char in pickedCharacters.filter(c => c.teamId === 2)"
                                     :key="char.characterId"
                                     class="picked-player"
                                   >
@@ -1573,10 +1880,10 @@ const loadRoomDetail = async () => {
                                     <img :src="char.characterAvatar" :alt="char.characterName" class="picked-avatar">
                                     <div class="picked-name">{{ char.characterName }}</div>
                                   </div>
-                                  
+
                                   <!-- 空位 -->
-                                  <div 
-                                    v-for="n in (5 - (room.players || []).filter(p => p.teamId === 2 && p.isCaptain).length - pickedCharacters.filter(c => c.teamId === 2).length)" 
+                                  <div
+                                    v-for="n in (5 - (room.players || []).filter(p => p.teamId === 2 && p.isCaptain).length - pickedCharacters.filter(c => c.teamId === 2).length)"
                                     :key="`empty-pick-2-${n}`"
                                     class="empty-pick"
                                   >
@@ -1587,15 +1894,15 @@ const loadRoomDetail = async () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           <!-- 公共玩家池 -->
                           <div class="common-players-pool">
                             <div class="pool-header">
                               <h3>待选玩家</h3>
                             </div>
                             <div class="pool-players">
-                              <div 
-                                v-for="player in characters.filter(c => !pickedCharacters.some(p => p.characterId === c.id))" 
+                              <div
+                                v-for="player in characters.filter(c => !pickedCharacters.some(p => p.characterId === c.id))"
                                 :key="player.id"
                                 class="pool-player"
                                 :class="{'selectable': pickingPhase.currentTeam === userTeamId && isCaptain}"
@@ -1607,7 +1914,7 @@ const loadRoomDetail = async () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <!-- 提示信息 -->
                         <div v-if="isCaptain && pickingPhase.currentTeam === userTeamId" class="pick-message">
                           请选择一名玩家加入您的队伍
@@ -1621,7 +1928,7 @@ const loadRoomDetail = async () => {
                       </div>
                     </div>
                   </template>
-                  
+
                   <!-- 选边阶段 -->
                   <template v-else-if="room.status === 'side-picking'">
                     <div class="room-body side-picking-phase">
@@ -1632,43 +1939,43 @@ const loadRoomDetail = async () => {
                             选人阶段已完成
                           </div>
                         </div>
-                        
+
                         <div class="side-picking-content">
                           <div class="side-picking-message">
                             <div class="alert-message">
                               由一队队长选择红蓝方
                             </div>
-                            
+
                             <div v-if="isCaptain && userTeamId === 1" class="side-selection">
-                              <button 
-                                class="side-btn red-side" 
+                              <button
+                                class="side-btn red-side"
                                 @click="pickSide('red')"
                               >
                                 <div class="side-icon">🔴</div>
                                 <div>选择红方</div>
                               </button>
-                              <button 
-                                class="side-btn blue-side" 
+                              <button
+                                class="side-btn blue-side"
                                 @click="pickSide('blue')"
                               >
                                 <div class="side-icon">🔵</div>
                                 <div>选择蓝方</div>
                               </button>
                             </div>
-                            
+
                             <div v-else class="waiting-for-side-pick">
                               <p>等待一队队长选择红蓝方...</p>
                             </div>
                           </div>
-                          
+
                           <!-- 双方阵容展示 -->
                           <div class="teams-composition">
                             <!-- 一队已选择的角色 -->
                             <div class="team-composition team-red">
                               <h3>一队阵容 <span class="team-count">{{ pickedCharacters.filter(c => c.teamId === 1).length }}/5</span></h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1678,8 +1985,8 @@ const loadRoomDetail = async () => {
                                 </div>
 
                                 <!-- 空位 -->
-                                <div 
-                                  v-for="n in (5 - pickedCharacters.filter(c => c.teamId === 1).length)" 
+                                <div
+                                  v-for="n in (5 - pickedCharacters.filter(c => c.teamId === 1).length)"
                                   :key="`empty-team1-${n}`"
                                   class="empty-character"
                                 >
@@ -1688,13 +1995,13 @@ const loadRoomDetail = async () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <!-- 二队已选择的角色 -->
                             <div class="team-composition team-blue">
                               <h3>二队阵容 <span class="team-count">{{ pickedCharacters.filter(c => c.teamId === 2).length }}/5</span></h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1704,8 +2011,8 @@ const loadRoomDetail = async () => {
                                 </div>
 
                                 <!-- 空位 -->
-                                <div 
-                                  v-for="n in (5 - pickedCharacters.filter(c => c.teamId === 2).length)" 
+                                <div
+                                  v-for="n in (5 - pickedCharacters.filter(c => c.teamId === 2).length)"
                                   :key="`empty-team2-${n}`"
                                   class="empty-character"
                                 >
@@ -1719,7 +2026,7 @@ const loadRoomDetail = async () => {
                       </div>
                     </div>
                   </template>
-                  
+
                   <!-- 等待游戏开始界面 -->
                   <template v-else-if="room.status === 'waiting-game'">
                     <div class="room-body waiting-game-phase">
@@ -1727,7 +2034,7 @@ const loadRoomDetail = async () => {
                         <div class="card-header">
                           <h2 class="section-title">等待游戏开始</h2>
                         </div>
-                        
+
                         <div class="waiting-game-content">
                           <div class="waiting-game-message">
                             <p>
@@ -1735,19 +2042,19 @@ const loadRoomDetail = async () => {
                               二队将使用 {{ room.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
                             </p>
                             <p>所有玩家请在游戏客户端中建立自定义房间，按照分配加入对应队伍</p>
-                            
+
                             <div v-if="isCreator" class="start-game-section">
                               <p>请在确认所有玩家已准备就绪后开始游戏</p>
                               <el-button type="success" @click="startGame" class="start-game-btn">
                                 开始游戏
                               </el-button>
                             </div>
-                            
+
                             <div v-else class="waiting-for-game-start">
                               <p>等待房主开始游戏...</p>
                             </div>
                           </div>
-                          
+
                           <!-- 双方阵容展示 -->
                           <div class="teams-composition">
                             <!-- 一队已选择的角色 -->
@@ -1759,8 +2066,8 @@ const loadRoomDetail = async () => {
                                 </span>
                               </h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1769,7 +2076,7 @@ const loadRoomDetail = async () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <!-- 二队已选择的角色 -->
                             <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
                               <h3>
@@ -1779,8 +2086,8 @@ const loadRoomDetail = async () => {
                                 </span>
                               </h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1794,7 +2101,7 @@ const loadRoomDetail = async () => {
                       </div>
                     </div>
                   </template>
-                  
+
                   <!-- 游戏中界面 -->
                   <template v-else-if="room.status === 'gaming'">
                     <div class="room-body gaming-phase">
@@ -1802,7 +2109,7 @@ const loadRoomDetail = async () => {
                         <div class="card-header">
                           <h2 class="section-title">游戏进行中</h2>
                         </div>
-                        
+
                         <div class="gaming-content">
                           <div class="gaming-message">
                             <p>游戏已开始，对局数据将在游戏结束后更新</p>
@@ -1811,7 +2118,7 @@ const loadRoomDetail = async () => {
                               <div class="timer">25:30</div>
                             </div>
                           </div>
-                          
+
                           <!-- 双方阵容展示 -->
                           <div class="teams-composition">
                             <!-- 一队已选择的角色 -->
@@ -1823,8 +2130,8 @@ const loadRoomDetail = async () => {
                                 </span>
                               </h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 1)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1833,7 +2140,7 @@ const loadRoomDetail = async () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             <!-- 二队已选择的角色 -->
                             <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
                               <h3>
@@ -1843,8 +2150,8 @@ const loadRoomDetail = async () => {
                                 </span>
                               </h3>
                               <div class="team-characters">
-                                <div 
-                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)" 
+                                <div
+                                  v-for="char in pickedCharacters.filter(c => c.teamId === 2)"
                                   :key="char.characterId"
                                   class="team-character"
                                 >
@@ -1859,43 +2166,43 @@ const loadRoomDetail = async () => {
                     </div>
                   </template>
                 </div>
-                
+
                 <!-- 始终显示的聊天区域 -->
                 <div class="chat-wrapper">
                   <div class="section-card chat-container-main">
                     <div class="card-header">
                       <h2 class="section-title">聊天室</h2>
                     </div>
-                    
+
                     <div class="chat-tabs">
-                      <div 
-                        class="chat-tab" 
+                      <div
+                        class="chat-tab"
                         :class="{'active': activeChat === 'public'}"
                         @click="switchChatChannel('public')"
                       >
                         公共聊天
                       </div>
-                      <div 
+                      <div
                         v-if="room.status !== 'waiting' && userTeamId === 1"
-                        class="chat-tab" 
+                        class="chat-tab"
                         :class="{'active': activeChat === 'team1'}"
                         @click="switchChatChannel('team1')"
                       >
                         一队聊天
                       </div>
-                      <div 
+                      <div
                         v-if="room.status !== 'waiting' && userTeamId === 2"
-                        class="chat-tab" 
+                        class="chat-tab"
                         :class="{'active': activeChat === 'team2'}"
                         @click="switchChatChannel('team2')"
                       >
                         二队聊天
                       </div>
                     </div>
-                    
+
                     <div class="chat-messages">
-                      <div 
-                        v-for="msg in messages[activeChat]" 
+                      <div
+                        v-for="msg in messages[activeChat]"
                         :key="msg.id"
                         :class="['message', {'system-message': msg.userId === 'system'}]"
                       >
@@ -1916,7 +2223,7 @@ const loadRoomDetail = async () => {
                         </template>
                       </div>
                     </div>
-                    
+
                     <!-- 聊天输入框部分 -->
                     <div class="chat-input">
                       <input
@@ -1935,7 +2242,7 @@ const loadRoomDetail = async () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 选择角色弹窗 -->
           <el-dialog
             v-model="characterPickingVisible"
@@ -1946,8 +2253,8 @@ const loadRoomDetail = async () => {
             :show-close="false"
           >
             <div class="character-grid">
-              <div 
-                v-for="character in characters" 
+              <div
+                v-for="character in characters"
                 :key="character.id"
                 class="character-item"
                 :class="{'disabled': pickedCharacters.some(c => c.characterId === character.id)}"
@@ -1958,7 +2265,7 @@ const loadRoomDetail = async () => {
               </div>
             </div>
           </el-dialog>
-          
+
           <!-- 选择红蓝方弹窗 -->
           <el-dialog
             v-model="sideSelectorVisible"
@@ -1975,7 +2282,7 @@ const loadRoomDetail = async () => {
                   <h3>红方</h3>
                   <p>选择红方作为您的队伍方</p>
                 </div>
-                
+
                 <div class="side-option blue" @click="pickSide('blue')">
                   <div class="side-icon">🔵</div>
                   <h3>蓝方</h3>
@@ -1985,10 +2292,10 @@ const loadRoomDetail = async () => {
             </div>
           </el-dialog>
         </template>
-        
-        <el-empty 
+
+        <el-empty
           v-else-if="!isLoading"
-          description="房间不存在或已被删除" 
+          description="房间不存在或已被删除"
           :image-size="200"
         >
           <el-button type="primary" @click="router.push('/rooms')">返回房间列表</el-button>
@@ -2308,7 +2615,7 @@ const loadRoomDetail = async () => {
   gap: 5px;
 }
 
-.btn-emoji, 
+.btn-emoji,
 .btn-send {
   min-width: 40px;
   height: 36px;
@@ -2988,7 +3295,7 @@ const loadRoomDetail = async () => {
   gap: 5px;
 }
 
-.chat-wrapper .btn-emoji, 
+.chat-wrapper .btn-emoji,
 .chat-wrapper .btn-send {
   min-width: 40px;
   height: 36px;
@@ -3018,57 +3325,57 @@ const loadRoomDetail = async () => {
     flex-direction: column;
     height: auto;
   }
-  
+
   .sidebar {
     width: 100%;
     height: 300px;
   }
-  
+
   .sidebar-collapsed .sidebar {
     height: 40px;
     width: 100%;
   }
-  
+
   .sidebar-toggle {
     transform: rotate(90deg);
   }
-  
+
   .player-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
-  
+
   .teams-picks {
     flex-direction: column;
   }
-  
+
   .side-options {
     flex-direction: column;
   }
-  
+
   .picking-phase {
     flex-direction: column;
   }
-  
+
   .teams-container {
     flex-direction: column;
   }
-  
+
   .team-players-grid {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   }
-  
+
   .pick-content-container {
     flex-direction: column;
   }
-  
+
   .picking-phase {
     flex-direction: column;
   }
-  
+
   .teams-container {
     flex-direction: column;
   }
-  
+
   .team-players-grid {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   }
@@ -3226,16 +3533,16 @@ const loadRoomDetail = async () => {
   .side-picking-content {
     padding: 1rem;
   }
-  
+
   .teams-composition {
     flex-direction: column;
   }
-  
+
   .side-selection {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .team-characters {
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   }
@@ -3402,7 +3709,7 @@ const loadRoomDetail = async () => {
   .pool-players {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .pool-player-avatar {
     width: 50px;
     height: 50px;
@@ -3482,12 +3789,12 @@ const loadRoomDetail = async () => {
     max-height: none !important;
     padding-bottom: 70px !important;
   }
-  
+
   .chat-wrapper .chat-messages {
     max-height: calc(100% - 80px) !important;
     min-height: 180px !important;
   }
-  
+
   .chat-input {
     height: 60px !important;
   }
@@ -3576,7 +3883,7 @@ const loadRoomDetail = async () => {
   margin: 0 !important;
 }
 
-.btn-emoji, 
+.btn-emoji,
 .btn-send {
   min-width: 40px !important;
   height: 40px !important;
@@ -3631,10 +3938,10 @@ const loadRoomDetail = async () => {
         <span v-if="player.userId === room.creatorId" class="creator-badge">房主</span>
       </div>
       <div class="player-actions">
-        <el-button 
+        <el-button
           v-if="isCreator && player.userId !== userStore.userId"
-          type="danger" 
-          size="small" 
+          type="danger"
+          size="small"
           @click="kickPlayer(player.userId, player.username)"
           :icon="Delete"
         >
@@ -3654,10 +3961,10 @@ const loadRoomDetail = async () => {
         <span class="spectator-name">{{ spectator.username }}</span>
       </div>
       <div class="spectator-actions">
-        <el-button 
+        <el-button
           v-if="isCreator && spectator.userId !== userStore.userId"
-          type="danger" 
-          size="small" 
+          type="danger"
+          size="small"
           @click="kickPlayer(spectator.userId, spectator.username)"
           :icon="Delete"
         >

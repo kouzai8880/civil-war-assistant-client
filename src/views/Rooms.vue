@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
+import { useSocketStore } from '../stores/socket'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CreateRoomModal from '../components/CreateRoomModal.vue'
 
@@ -181,18 +182,34 @@ const joinRoomWithPassword = async (roomId, password) => {
   try {
     isLoading.value = true
 
-    // 调用API加入房间
-    const success = await roomStore.joinRoom(roomId, password)
+    // 确保WebSocket连接（用于接收通知）
+    const socketStore = useSocketStore()
+    if (!socketStore.isConnected) {
+      console.log('WebSocket未连接，尝试连接...')
+      await socketStore.connect()
+      if (!socketStore.isConnected) {
+        console.warn('WebSocket连接失败，但仍然可以加入房间')
+      }
+    }
 
-    if (success) {
-      ElMessage.success('成功加入房间')
-      // 关闭密码对话框
-      showPasswordDialog.value = false
-      // 导航到房间详情页
-      router.push(`/room/${roomId}`)
-    } else {
+    // 使用REST API加入房间
+    console.log(`使用REST API加入房间 ${roomId}`, password ? '带密码' : '无密码')
+
+    // 无论有没有密码，都使用REST API加入房间
+    const success = await roomStore.joinRoom(roomId, password)
+    if (!success) {
       throw new Error(roomStore.error || '加入房间失败')
     }
+
+    // 不再等待WebSocket事件，直接跳转到房间详情页
+    // 如果需要房间数据，可以在房间详情页中加载
+    console.log('加入房间成功，准备跳转到房间详情页')
+
+    ElMessage.success('成功加入房间')
+    // 关闭密码对话框
+    showPasswordDialog.value = false
+    // 导航到房间详情页
+    router.push(`/room/${roomId}`)
   } catch (error) {
     console.error('加入房间失败:', error)
     ElMessage.error(error.message || '加入房间失败，请稍后重试')

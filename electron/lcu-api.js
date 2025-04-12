@@ -32,8 +32,8 @@ class LCUClient {
       // 获取英雄联盟客户端进程信息
       const lockfileInfo = await this.getLockfileInfo()
       if (!lockfileInfo) {
-        console.error('无法获取英雄联盟客户端信息，请确保客户端已启动')
-        return false
+        // 使用英文错误消息避免乱码
+        throw new Error('Cannot connect to League of Legends client. Please make sure the client is running.')
       }
 
       // 解析lockfile信息
@@ -49,7 +49,7 @@ class LCUClient {
       console.log('成功连接到LCU API')
       return true
     } catch (error) {
-      console.error('LCU API初始化失败:', error)
+      console.error('LCU API init failed:', error)
       this.connected = false
       return false
     }
@@ -77,7 +77,8 @@ class LCUClient {
       const lockfileContent = await readFile(lockfilePath, 'utf8')
       return lockfileContent
     } catch (error) {
-      console.error('获取lockfile信息失败:', error)
+      // 使用英文错误消息避免乱码
+      console.error('Failed to get lockfile info:', error.message)
       return null
     }
   }

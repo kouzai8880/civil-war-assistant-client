@@ -44,19 +44,19 @@ export const useElectronStore = defineStore('electron', () => {
   // 初始化
   async function init() {
     isElectronEnv.value = isElectron()
-    
+
     if (!isElectronEnv.value) {
       console.log('非Electron环境，跳过初始化')
       return
     }
-    
+
     try {
       // 获取应用版本
       appVersion.value = await electronService.getAppVersion()
-      
+
       // 注册事件监听
       setupEventListeners()
-      
+
       // 尝试连接LCU API
       await connectToLCU()
     } catch (error) {
@@ -72,18 +72,19 @@ export const useElectronStore = defineStore('electron', () => {
       lcuConnecting.value = false
       currentSummoner.value = summoner
       connectionError.value = null
-      
+
       // 获取当前游戏状态
       refreshGameflowPhase()
     })
-    
+
     // LCU连接错误
     electronService.onLCUConnectionError((message) => {
       lcuConnected.value = false
       lcuConnecting.value = false
-      connectionError.value = message
+      // 使用友好的错误提示
+      connectionError.value = '无法连接到英雄联盟客户端，请确保客户端已启动'
     })
-    
+
     // 游戏状态变化
     electronService.onGameflowPhaseChanged((phase) => {
       gameflowPhase.value = phase
@@ -93,10 +94,10 @@ export const useElectronStore = defineStore('electron', () => {
   // 连接到LCU API
   async function connectToLCU() {
     if (lcuConnecting.value) return false
-    
+
     lcuConnecting.value = true
     connectionError.value = null
-    
+
     try {
       const result = await electronService.connectToLCU()
       return result
@@ -111,7 +112,7 @@ export const useElectronStore = defineStore('electron', () => {
   // 刷新游戏状态
   async function refreshGameflowPhase() {
     if (!lcuConnected.value) return
-    
+
     try {
       const phase = await electronService.lcuAPI.getGameflowPhase()
       if (phase) {
@@ -143,7 +144,7 @@ export const useElectronStore = defineStore('electron', () => {
     gameflowPhase,
     connectionError,
     gameStatus,
-    
+
     // 方法
     init,
     connectToLCU,

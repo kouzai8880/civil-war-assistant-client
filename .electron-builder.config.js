@@ -1,0 +1,43 @@
+/**
+ * @type {import('electron-builder').Configuration}
+ * @see https://www.electron.build/configuration/configuration
+ */
+module.exports = {
+  appId: "com.civilwar.assistant",
+  productName: "英雄联盟内战助手",
+  copyright: "Copyright © 2023-2024 内战助手团队",
+  directories: {
+    output: "release"
+  },
+  files: [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"]
+      }
+    ],
+    icon: "public/favicon.ico"
+  },
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "英雄联盟内战助手"
+  },
+  publish: [
+    {
+      provider: "github",
+      owner: "your-github-username",
+      repo: "civil-war-assistant"
+    }
+  ],
+  // 确保 preload.js 被正确处理
+  extraMetadata: {
+    main: "dist-electron/main.js"
+  }
+}

@@ -1,7 +1,6 @@
-import require$$1$4, { app, dialog, ipcMain, shell, BrowserWindow, Menu, nativeImage, Tray } from "electron";
+import require$$1$4, { app, dialog, ipcMain, shell, BrowserWindow, Menu, nativeImage, Tray, session } from "electron";
 import require$$1$1, { join } from "path";
 import require$$2, { release } from "os";
-import { createRequire } from "module";
 import require$$1 from "fs";
 import require$$0 from "constants";
 import require$$0$1 from "stream";
@@ -16954,8 +16953,7 @@ class LCUClient {
     try {
       const lockfileInfo = await this.getLockfileInfo();
       if (!lockfileInfo) {
-        console.error("无法获取英雄联盟客户端信息，请确保客户端已启动");
-        return false;
+        throw new Error("Cannot connect to League of Legends client. Please make sure the client is running.");
       }
       const [, , port, password] = lockfileInfo.split(":");
       this.port = port;
@@ -16966,7 +16964,7 @@ class LCUClient {
       console.log("成功连接到LCU API");
       return true;
     } catch (error2) {
-      console.error("LCU API初始化失败:", error2);
+      console.error("LCU API init failed:", error2);
       this.connected = false;
       return false;
     }
@@ -16987,7 +16985,7 @@ class LCUClient {
       const lockfileContent = await readFile$1(lockfilePath, "utf8");
       return lockfileContent;
     } catch (error2) {
-      console.error("获取lockfile信息失败:", error2);
+      console.error("Failed to get lockfile info:", error2.message);
       return null;
     }
   }
@@ -17162,9 +17160,58 @@ class LCUClient {
     this.eventHandlers = {};
   }
 }
-createRequire(import.meta.url);
 if (release().startsWith("6.1")) app.disableHardwareAcceleration();
 if (process.platform === "win32") app.setAppUserModelId(app.getName());
+app.commandLine.appendSwitch("lang", "zh-CN");
+app.commandLine.appendSwitch("force-renderer-accessibility");
+app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
+app.commandLine.appendSwitch("disable-gpu-program-cache");
+app.commandLine.appendSwitch("persist-user-preferences");
+app.commandLine.appendSwitch("enable-features", "PersistentOriginTrials");
+const userDataPath = app.getPath("userData");
+const customCachePath = join(userDataPath, "Cache");
+const gpuCachePath = join(userDataPath, "GPUCache");
+const codeCachePath = join(userDataPath, "Code Cache");
+const serviceWorkerPath = join(userDataPath, "Service Worker");
+app.commandLine.appendSwitch("disk-cache-size", "104857600");
+process.env.LANG = "zh_CN.UTF-8";
+process.env.LC_ALL = "zh_CN.UTF-8";
+process.env.LC_CTYPE = "zh_CN.UTF-8";
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalConsoleInfo = console.info;
+function customLog(prefix, ...args) {
+  if (!app.isPackaged) {
+    const message = args.map((arg) => {
+      if (arg instanceof Error) {
+        return `Error: ${arg.message}`;
+      }
+      return String(arg);
+    }).join(" ");
+    if (prefix === "ERROR") {
+      originalConsoleError(`[ERROR] ${message}`);
+    } else if (prefix === "WARN") {
+      originalConsoleWarn(`[WARN] ${message}`);
+    } else if (prefix === "INFO") {
+      originalConsoleInfo(`[INFO] ${message}`);
+    } else {
+      originalConsoleLog(`[LOG] ${message}`);
+    }
+  }
+}
+console.log = function(...args) {
+  customLog("LOG", ...args);
+};
+console.error = function(...args) {
+  customLog("ERROR", ...args);
+};
+console.warn = function(...args) {
+  customLog("WARN", ...args);
+};
+console.info = function(...args) {
+  customLog("INFO", ...args);
+};
 const ROOT_PATH = {
   // /dist
   dist: join(process.cwd(), "dist"),
@@ -17176,6 +17223,7 @@ let tray = null;
 let isQuitting = false;
 let lcuConnected = false;
 let lcuClient = null;
+let isInitialStartup = true;
 async function createWindow() {
   win = new BrowserWindow({
     title: "英雄联盟内战助手",
@@ -17185,12 +17233,19 @@ async function createWindow() {
     minHeight: 768,
     icon: join(ROOT_PATH.public, "favicon.ico"),
     webPreferences: {
-      preload: join(process.cwd(), "electron/preload.js"),
+      preload: join(process.cwd(), app.isPackaged ? "dist-electron/preload.js" : "electron/preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: true,
       // 允许渲染进程使用remote模块
-      enableRemoteModule: false
+      enableRemoteModule: false,
+      // 缓存相关设置，解决“拒绝访问”错误
+      // 不设置partition，使用默认的持久化会话，保留用户登录状态
+      backgroundThrottling: false,
+      // 禁用后台节流
+      // 启用持久化存储
+      persistentCookies: true,
+      cache: true
     }
   });
   const template = [
@@ -17259,6 +17314,33 @@ async function createWindow() {
   ];
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const port = process.env.VITE_PORT || "3001";
+    const cspDirectives = app.isPackaged ? [
+      // 生产环境的 CSP
+      "default-src 'self';",
+      "script-src 'self';",
+      "img-src 'self' data: https:;",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+      "connect-src 'self' http://localhost:3000 ws://localhost:3000;",
+      "font-src 'self' data: https://fonts.gstatic.com;"
+    ] : [
+      // 开发环境的 CSP
+      "default-src 'self';",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline';",
+      // 开发模式需要 unsafe-eval
+      "img-src 'self' data: https:;",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+      `connect-src 'self' http://localhost:${port} ws://localhost:${port} http://localhost:3000 ws://localhost:3000;`,
+      "font-src 'self' data: https://fonts.gstatic.com;"
+    ];
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [cspDirectives.join(" ")]
+      }
+    });
+  });
   if (app.isPackaged) {
     win.loadFile(join(ROOT_PATH.dist, "index.html"));
   } else {
@@ -17325,8 +17407,14 @@ async function connectToLCU() {
     const connected = await lcuClient.init();
     lcuConnected = connected;
     if (!connected) {
-      throw new Error("无法连接到英雄联盟客户端，请确保客户端已启动");
+      const errorMsg = "Cannot connect to League of Legends client. Please make sure the client is running.";
+      console.error(errorMsg);
+      if (win && !isInitialStartup) {
+        win.webContents.send("lcu-connection-error", "无法连接到英雄联盟客户端，请确保客户端已启动");
+      }
+      throw new Error(errorMsg);
     }
+    isInitialStartup = false;
     lcuClient.on("gameflow-phase", (phase) => {
       console.log("游戏状态变化:", phase);
       if (win) {
@@ -17374,11 +17462,11 @@ async function connectToLCU() {
     }
     return true;
   } catch (error2) {
-    console.error("连接LCU API失败:", error2);
+    console.error("Failed to connect to LCU API:", error2.message);
     lcuConnected = false;
     lcuClient = null;
-    if (win) {
-      win.webContents.send("lcu-connection-error", error2.message);
+    if (win && !isInitialStartup) {
+      win.webContents.send("lcu-connection-error", "无法连接到英雄联盟客户端，请确保客户端已启动");
     }
     return false;
   }
@@ -17494,7 +17582,71 @@ ipcMain.handle("lcu-get-game-details", async (event, gameId) => {
   }
   return await lcuClient.getGameDetails(gameId);
 });
-app.whenReady().then(createWindow);
+setInterval(async () => {
+  if (!lcuConnected) {
+    try {
+      await connectToLCU();
+    } catch (error2) {
+    }
+  }
+}, 3e4);
+function ensureDirectoryExists(dirPath) {
+  try {
+    if (!require$$1.existsSync(dirPath)) {
+      console.log(`创建目录: ${dirPath}`);
+      require$$1.mkdirSync(dirPath, { recursive: true });
+    }
+    return true;
+  } catch (error2) {
+    console.error(`创建目录失败 ${dirPath}: ${error2.message}`);
+    return false;
+  }
+}
+function createCacheDirectories() {
+  ensureDirectoryExists(customCachePath);
+  ensureDirectoryExists(gpuCachePath);
+  ensureDirectoryExists(codeCachePath);
+  ensureDirectoryExists(serviceWorkerPath);
+  const otherCachePaths = [
+    join(userDataPath, "Local Storage"),
+    join(userDataPath, "Session Storage"),
+    join(userDataPath, "IndexedDB"),
+    join(userDataPath, "Cookies")
+  ];
+  otherCachePaths.forEach((path2) => ensureDirectoryExists(path2));
+}
+function handleCacheErrors() {
+  process.on("uncaughtException", (error2) => {
+    if (error2.message && (error2.message.includes("cache") || error2.message.includes("Unable to move") || error2.message.includes("拒绝访问"))) {
+      console.error("捕获到缓存错误，但不影响应用程序运行:", error2.message);
+      createCacheDirectories();
+    } else {
+      throw error2;
+    }
+  });
+}
+function initializeSession() {
+  createCacheDirectories();
+  handleCacheErrors();
+  const ses = session.defaultSession;
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders["Keep-Alive"] = "300";
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+  ses.cookies.set({
+    url: "http://localhost:3000",
+    name: "persist",
+    value: "true",
+    expirationDate: Math.floor(Date.now() / 1e3) + 365 * 24 * 60 * 60,
+    // 1年后过期
+    httpOnly: false,
+    secure: false
+  }).catch((err) => console.error("设置Cookie失败:", err));
+}
+app.whenReady().then(() => {
+  initializeSession();
+  createWindow();
+});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();

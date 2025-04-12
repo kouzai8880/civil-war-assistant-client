@@ -261,17 +261,22 @@ export const useSocketStore = defineStore('socket', () => {
   }
 
   // 发送房间消息
-  const sendRoomMessage = (content, type = 'text') => {
-    if (!connected.value || !currentRoomId.value) {
-      error.value = '未连接或未加入房间，无法发送消息'
+  const sendRoomMessage = (roomId, content, type = 'text', channel = 'public', teamId = null, callback) => {
+    if (!connected.value) {
+      error.value = 'WebSocket未连接，无法发送消息'
+      if (callback) callback({ status: 'error', message: error.value })
       return false
     }
 
     try {
-      roomApi.sendRoomMessage(currentRoomId.value, content, type)
+      roomApi.sendRoomMessage(roomId, content, type, channel, teamId, (response) => {
+        console.log('发送消息响应:', response)
+        if (callback) callback(response)
+      })
       return true
     } catch (err) {
       error.value = err.message || '发送消息失败'
+      if (callback) callback({ status: 'error', message: error.value })
       return false
     }
   }
@@ -377,7 +382,13 @@ export const useSocketStore = defineStore('socket', () => {
         const roomData = response.data.room
         currentRoomId.value = roomData.id
         // 将事件分发给其他组件
-        window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
+        console.log('[WebSocket] 分发roomJoined事件到窗口')
+        try {
+          window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
+          console.log('[WebSocket] roomJoined事件分发成功')
+        } catch (error) {
+          console.error('[WebSocket] 分发roomJoined事件失败:', error)
+        }
       } else {
         console.error('[WebSocket] 加入房间失败:', response.message)
         window.dispatchEvent(new CustomEvent('roomError', { detail: response }))
@@ -533,11 +544,32 @@ export const useSocketStore = defineStore('socket', () => {
 
     on('roomMessage', (data) => {
       console.log('[WebSocket] 收到房间消息:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('roomMessage', { detail: data }))
+    })
+
+    // 新的消息事件
+    on('new_message', (data) => {
+      console.log('[WebSocket] 收到新消息:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('newMessage', { detail: data }))
     })
 
     // 系统事件
     on('reconnect', (attemptNumber) => {
       console.log('[WebSocket] 重新连接成功，尝试次数:', attemptNumber)
+
+      // 如果之前在房间中，重新加入房间
+      if (currentRoomId.value) {
+        console.log(`[WebSocket] 重连后自动重新加入房间: ${currentRoomId.value}`)
+        // 使用当前房间ID重新加入
+        joinRoom(currentRoomId.value)
+
+        // 分发重连事件，通知其他组件
+        window.dispatchEvent(new CustomEvent('socketReconnected', {
+          detail: { roomId: currentRoomId.value }
+        }))
+      }
     })
 
     on('reconnect_attempt', (attemptNumber) => {

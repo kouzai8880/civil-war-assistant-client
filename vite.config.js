@@ -34,7 +34,11 @@ export default defineConfig({
         },
         vite: {
           build: {
-            outDir: 'dist-electron'
+            outDir: 'dist-electron',
+            // 为 preload 脚本使用 CommonJS 格式
+            rollupOptions: {
+              format: 'cjs'
+            }
           }
         }
       }

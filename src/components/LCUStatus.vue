@@ -116,9 +116,21 @@ function setupListeners() {
 
   // 连接错误
   const removeErrorListener = window.electronAPI.onLCUConnectionError((message) => {
+    // 只有当状态发生变化时才显示提示
+    const wasConnected = connected.value
     connected.value = false
     summonerName.value = ''
-    ElMessage.error(`连接错误: ${message}`)
+
+    // 只有当之前是连接状态时，才显示断开连接的提示
+    if (wasConnected) {
+      // 使用更友好的错误提示
+      ElMessage({
+        message: `无法连接到英雄联盟客户端，请确保客户端已启动`,
+        type: 'warning',
+        duration: 5000,
+        showClose: true
+      })
+    }
   })
 
   // 游戏状态变化

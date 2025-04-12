@@ -152,7 +152,8 @@ const messages = ref({
   public: [
     { id: 1, userId: 'system', username: '系统', content: '欢迎来到房间，请准备就绪', time: new Date() }
   ],
-  team: []
+  team1: [],
+  team2: []
 })
 
 // 聊天输入
@@ -449,9 +450,8 @@ const loadRoomDetail = async () => {
 
     // 初始化聊天消息
     if (roomData.messages && roomData.messages.length > 0) {
-      messages.value.public = roomData.messages.filter(msg => !msg.teamId)
-      messages.value.team1 = roomData.messages.filter(msg => msg.teamId === 1)
-      messages.value.team2 = roomData.messages.filter(msg => msg.teamId === 2)
+      console.log(`从房间详情中加载 ${roomData.messages.length} 条历史聊天记录`);
+      loadChatHistory(roomData.messages);
     }
 
     // 如果房间已经在选人阶段，初始化选人状态
@@ -487,7 +487,12 @@ const loadRoomDetail = async () => {
 // 设置房间事件监听器
 const setupRoomEventListeners = () => {
   // 添加事件监听器
-  window.addEventListener('roomJoined', handleRoomJoined)
+  console.log('添加roomJoined事件监听器')
+  window.addEventListener('roomJoined', (event) => {
+    console.log('直接在监听器中捕获到roomJoined事件:', event.detail)
+    handleRoomJoined(event)
+  })
+
   window.addEventListener('roleChanged', handleRoleChanged)
   window.addEventListener('roomStatusUpdate', handleRoomStatusUpdate)
   window.addEventListener('spectatorJoined', handleSpectatorJoined)
@@ -501,12 +506,15 @@ const setupRoomEventListeners = () => {
   window.addEventListener('teamUpdate', handleTeamUpdate)
   window.addEventListener('newMessage', handleNewMessage)
   window.addEventListener('socketError', handleSocketError)
+  window.addEventListener('socketReconnected', handleSocketReconnected)
   console.log('已添加房间事件监听器')
 }
-
 // 清除房间事件监听器
 const cleanupRoomEventListeners = () => {
-  window.removeEventListener('roomJoined', handleRoomJoined)
+  // 注意：由于我们使用了匿名函数作为roomJoined的监听器，
+  // 这里无法直接移除它。在实际应用中，应该保存监听器引用或使用命名函数。
+  // 这里我们只移除其他监听器。
+
   window.removeEventListener('roleChanged', handleRoleChanged)
   window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
   window.removeEventListener('spectatorJoined', handleSpectatorJoined)
@@ -520,20 +528,182 @@ const cleanupRoomEventListeners = () => {
   window.removeEventListener('teamUpdate', handleTeamUpdate)
   window.removeEventListener('newMessage', handleNewMessage)
   window.removeEventListener('socketError', handleSocketError)
+  window.removeEventListener('socketReconnected', handleSocketReconnected)
   console.log('已清除房间事件监听器')
 }
 
+// 格式化聊天消息的辅助函数
+const formatChatMessage = (message) => {
+  // 确定消息应该显示在哪个频道
+  let targetChannel = 'public';
+
+  if (message.channel === 'team' && message.teamId) {
+    targetChannel = `team${message.teamId}`;
+  }
+
+  // 构建消息对象
+  return {
+    id: message.id || Date.now(),
+    userId: message.userId,
+    username: message.username,
+    avatar: message.avatar || '',
+    content: message.content,
+    time: message.createTime ? new Date(message.createTime) : new Date(),
+    isSystem: message.type === 'system',
+    teamId: message.teamId,
+    channel: targetChannel
+  };
+};
+
+// 加载历史聊天记录
+const loadChatHistory = (chatHistory) => {
+  if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
+    console.log('没有历史聊天记录');
+    return;
+  }
+
+  console.log(`加载 ${chatHistory.length} 条历史聊天记录`);
+
+  try {
+    // 确保所有聊天频道都已初始化
+    if (!messages.value) {
+      messages.value = {
+        public: [],
+        team1: [],
+        team2: []
+      };
+    }
+
+    // 清空现有消息
+    Object.keys(messages.value).forEach(channel => {
+      messages.value[channel] = [];
+    });
+
+    // 处理每条历史消息
+    chatHistory.forEach((message, index) => {
+      console.log(`处理第 ${index + 1} 条消息:`, message.id);
+
+      // 判断消息类型和频道
+      let channel = 'public';
+      if (message.channel === 'team' && message.teamId) {
+        channel = `team${message.teamId}`;
+      }
+
+      // 构建消息对象
+      const formattedMessage = {
+        id: message.id || Date.now(),
+        userId: message.userId,
+        username: message.username,
+        avatar: message.avatar || '',
+        content: message.content,
+        time: message.createTime ? new Date(message.createTime) : new Date(),
+        isSystem: message.type === 'system',
+        teamId: message.teamId,
+        channel: channel
+      };
+
+      console.log(`消息将被添加到频道: ${channel}`);
+
+      // 如果是队伍消息，需要检查权限
+      if (channel.startsWith('team')) {
+        const teamId = parseInt(channel.replace('team', ''));
+        const isUserTeam = teamId === userTeamId.value;
+
+        // 如果是当前用户的队伍消息或者用户是观众但消息标记为可见
+        if (isUserTeam || (isSpectator.value && message.isTeamMessage)) {
+          if (!messages.value[channel]) messages.value[channel] = [];
+          messages.value[channel].push(formattedMessage);
+          console.log(`队伍消息已添加到 ${channel}`);
+        }
+      } else {
+        // 公共消息直接添加
+        if (!messages.value[channel]) messages.value[channel] = [];
+        messages.value[channel].push(formattedMessage);
+        console.log(`公共消息已添加到 ${channel}`);
+      }
+    });
+
+    // 检查消息是否成功加载
+    Object.keys(messages.value).forEach(channel => {
+      console.log(`频道 ${channel} 有 ${messages.value[channel].length} 条消息`);
+    });
+
+    console.log('历史聊天记录加载完成:', messages.value);
+
+    // 强制视图更新
+    const currentChat = activeChat.value;
+    activeChat.value = 'public';
+
+    // 自动滚动到底部
+    nextTick(() => {
+      const chatBox = document.querySelector('.chat-messages');
+      if (chatBox) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    });
+  } catch (error) {
+    console.error('加载历史聊天记录时出错:', error);
+  }
+};
+
 // 各种事件处理函数
 const handleRoomJoined = (event) => {
-  console.log('收到roomJoined事件:', event.detail)
-  if (event.detail && event.detail.status === 'success') {
-    // 如果是当前用户加入房间，不显示提示，因为在操作函数中已经显示了
-    const joinedUserId = event.detail.data?.userId || event.detail.data?.room?.userId
-    if (joinedUserId !== userStore.userId) {
-      ElMessage.success(event.detail.message || '成功加入房间')
+  console.log('★★★ handleRoomJoined 函数被调用 ★★★');
+  console.log('收到roomJoined事件:', event.detail);
+
+  try {
+    if (event.detail && event.detail.status === 'success') {
+      // 如果是当前用户加入房间，不显示提示，因为在操作函数中已经显示了
+      const joinedUserId = event.detail.data?.userId || event.detail.data?.room?.userId;
+      if (joinedUserId !== userStore.userId) {
+        ElMessage.success(event.detail.message || '成功加入房间');
+      }
+
+      // 加载历史聊天记录
+      if (event.detail.data?.messages) {
+        console.log(`开始加载 ${event.detail.data.messages.length} 条历史聊天记录`);
+        // 打印第一条消息以便于调试
+        if (event.detail.data.messages.length > 0) {
+          console.log('第一条消息示例:', event.detail.data.messages[0]);
+        }
+
+        // 加载历史消息
+        loadChatHistory(event.detail.data.messages);
+
+        // 检查消息是否已加载
+        setTimeout(() => {
+          console.log('当前消息状态:');
+          Object.keys(messages.value).forEach(channel => {
+            console.log(`频道 ${channel} 有 ${messages.value[channel].length} 条消息`);
+          });
+
+          // 如果消息没有加载，尝试再次加载
+          if (messages.value.public.length === 0 && event.detail.data.messages.length > 0) {
+            console.log('消息加载失败，尝试再次加载...');
+            loadChatHistory(event.detail.data.messages);
+          }
+        }, 200);
+      } else {
+        console.log('没有收到历史聊天记录');
+      }
+
+      // 不再调用refreshRoomDetail()，避免循环调用
+      // 直接使用事件中的房间数据更新本地房间数据
+      if (event.detail.data?.room) {
+        console.log('使用roomJoined事件中的房间数据更新本地房间数据');
+        roomStore.setCurrentRoom(event.detail.data);
+      }
+
+      // 添加系统消息
+      addSystemMessage('成功加入房间');
+    } else {
+      console.error('事件数据无效或状态不是成功:', event.detail);
     }
-    refreshRoomDetail()
+  } catch (error) {
+    console.error('处理roomJoined事件时出错:', error);
   }
+
+  console.log('★★★ handleRoomJoined 函数执行完毕 ★★★');
 }
 
 const handleRoleChanged = (event) => {
@@ -544,7 +714,7 @@ const handleRoleChanged = (event) => {
     if (changedUserId !== userStore.userId) {
       ElMessage.success(event.detail.message || '角色已变更')
     }
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -553,7 +723,7 @@ const handleRoleChanged = (event) => {
 const handleRoomStatusUpdate = (event) => {
   console.log('收到roomStatusUpdate事件:', event.detail)
   if (event.detail && event.detail.roomId === roomId.value) {
-    refreshRoomDetail()
+    refreshRoomDetail(false)
     if (event.detail.status === 'gaming') {
       ElMessage.success('游戏已开始')
     } else if (event.detail.status === 'ended') {
@@ -566,7 +736,7 @@ const handleSpectatorJoined = (event) => {
   console.log('收到spectatorJoined事件:', event.detail)
   if (event.detail && event.detail.userId) {
     addSystemMessage(`${event.detail.username || '新观众'} 加入了观众席`)
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -574,7 +744,7 @@ const handlePlayerJoined = (event) => {
   console.log('收到playerJoined事件:', event.detail)
   if (event.detail && event.detail.userId) {
     addSystemMessage(`${event.detail.username || '新玩家'} 加入了游戏`)
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -582,7 +752,7 @@ const handleSpectatorLeft = (event) => {
   console.log('收到spectatorLeft事件:', event.detail)
   if (event.detail && event.detail.userId) {
     addSystemMessage(`${event.detail.username || '观众'} 离开了观众席`)
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -590,7 +760,7 @@ const handlePlayerLeft = (event) => {
   console.log('收到playerLeft事件:', event.detail)
   if (event.detail && event.detail.userId) {
     addSystemMessage(`${event.detail.username || '玩家'} 离开了游戏`)
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -601,7 +771,7 @@ const handleSpectatorMoveToPlayer = (event) => {
     if (event.detail.userId !== userStore.userId) {
       addSystemMessage(`${event.detail.username || '观众'} 加入了玩家列表`)
     }
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -612,14 +782,14 @@ const handlePlayerMoveToSpectator = (event) => {
     if (event.detail.userId !== userStore.userId) {
       addSystemMessage(`${event.detail.username || '玩家'} 移动到了观众席`)
     }
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
 const handleGameStarted = (event) => {
   console.log('收到gameStarted事件:', event.detail)
   addSystemMessage('游戏开始！祈祷各位玩家游戏愉快')
-  refreshRoomDetail()
+  refreshRoomDetail(false)
 }
 
 const handlePlayerStatusUpdate = (event) => {
@@ -633,7 +803,7 @@ const handlePlayerStatusUpdate = (event) => {
         addSystemMessage(`${player.username || '玩家'} 取消了准备`)
       }
     }
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -647,7 +817,7 @@ const handleTeamUpdate = (event) => {
         addSystemMessage(`${team.name || `队伍${team.id}`} 选择了 ${sideName}`)
       }
     }
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 }
 
@@ -660,48 +830,38 @@ const handleNewMessage = (event) => {
     if (!messages.value) {
       messages.value = {
         public: [],
-        team: []
+        team1: [],
+        team2: []
       }
     }
 
-    // 根据消息类型添加到相应频道
-    if (message.channel === 'public' || !message.channel) {
-      if (!messages.value.public) messages.value.public = []
+    // 使用辅助函数格式化消息
+    const formattedMessage = formatChatMessage(message)
+    const channel = formattedMessage.channel
 
-      // 构建消息对象
-      const formattedMessage = {
-        id: message.id || Date.now(),
-        userId: message.userId,
-        username: message.username,
-        content: message.content,
-        time: message.createTime ? new Date(message.createTime) : new Date(),
-        isSystem: message.type === 'system'
-      }
+    // 检查消息是否已存在，避免重复添加
+    const messageExists = messages.value[channel]?.some(msg => msg.id === message.id)
+    if (messageExists) {
+      console.log(`消息 ${message.id} 已存在，不重复添加`)
+      return
+    }
 
-      messages.value.public.push(formattedMessage)
-      console.log('添加公共消息:', formattedMessage)
-    } else if (message.channel === 'team') {
-      if (!messages.value.team) messages.value.team = []
-
-      // 检查是否是当前用户所在的队伍消息
-      const isUserTeam = message.teamId === userTeamId.value
+    // 如果是队伍消息，需要检查权限
+    if (channel.startsWith('team')) {
+      const teamId = parseInt(channel.replace('team', ''))
+      const isUserTeam = teamId === userTeamId.value
 
       // 如果是当前用户的队伍消息或者用户是观众但消息标记为可见
       if (isUserTeam || (isSpectator.value && message.isTeamMessage)) {
-        // 构建消息对象
-        const formattedMessage = {
-          id: message.id || Date.now(),
-          userId: message.userId,
-          username: message.username,
-          content: message.content,
-          time: message.createTime ? new Date(message.createTime) : new Date(),
-          isSystem: message.type === 'system',
-          teamId: message.teamId
-        }
-
-        messages.value.team.push(formattedMessage)
-        console.log('添加队伍消息:', formattedMessage)
+        if (!messages.value[channel]) messages.value[channel] = []
+        messages.value[channel].push(formattedMessage)
+        console.log(`添加队伍${teamId}消息:`, formattedMessage)
       }
+    } else {
+      // 公共消息直接添加
+      if (!messages.value[channel]) messages.value[channel] = []
+      messages.value[channel].push(formattedMessage)
+      console.log('添加公共消息:', formattedMessage)
     }
 
     // 自动滚动到底部
@@ -723,7 +883,7 @@ const handleSocketError = (event) => {
     if (event.detail.code === 3001) { // 房间不存在
       router.push('/rooms')
     } else if (event.detail.code === 3003) { // 用户不在房间中
-      refreshRoomDetail()
+      refreshRoomDetail(false)
     } else if (event.detail.code === 3004 || (event.detail.message && event.detail.message.includes('密码'))) { // 密码错误
       // 显示密码输入框
       passwordDialogVisible.value = true
@@ -733,6 +893,21 @@ const handleSocketError = (event) => {
     } else if (event.detail.code === 3005) { // 玩家列表已满
       ElMessage.warning('玩家列表已满，无法加入')
     }
+  }
+}
+
+// 处理WebSocket重连事件
+const handleSocketReconnected = (event) => {
+  console.log('收到socketReconnected事件:', event.detail)
+  if (event.detail && event.detail.roomId) {
+    // 在WebSocket重连后，刷新房间数据
+    console.log(`WebSocket重连后刷新房间数据，房间ID: ${event.detail.roomId}`)
+
+    // 添加系统消息
+    addSystemMessage('与服务器的连接已恢复')
+
+    // 刷新房间数据，但不自动加入房间
+    refreshRoomDetail(false)
   }
 }
 
@@ -760,7 +935,7 @@ const joinRoomWithPassword = async () => {
       passwordDialogVisible.value = false
       passwordInput.value = ''
       // 重新加载房间详情
-      await refreshRoomDetail()
+      await refreshRoomDetail(false)
     } else {
       passwordError.value = roomStore.error || '密码错误，请重试'
     }
@@ -783,28 +958,32 @@ onMounted(async () => {
   isLoading.value = true
 
   try {
+    // 先设置房间事件监听器，确保能捕获到事件
+    console.log('先设置房间事件监听器')
+    setupRoomEventListeners()
+
     // 确保WebSocket连接
     if (!socketStore.isConnected) {
       await socketStore.connect()
     }
 
-    // 先获取房间详情
-    await refreshRoomDetail()
+    // 先获取房间详情，但不自动加入房间
+    await refreshRoomDetail(false)
 
     if (!room.value) {
       router.push('/rooms')
-      return
-    }
+      // 不使用return，而是使用条件判断，确保finally块会执行
+    } else {
 
-    // 检查用户是否已经在房间中
-    console.log('检查用户是否已在房间中:', room.value)
-    // 如果房间数据结构是嵌套的，需要使用room.value.room
-    const roomData = room.value && room.value.room ? room.value.room : room.value
-    const isAlreadyInRoom = roomStore.isUserInRoom(roomData)
+      // 检查用户是否已经在房间中
+      console.log('检查用户是否已在房间中:', room.value)
+      // 如果房间数据结构是嵌套的，需要使用room.value.room
+      const roomData = room.value && room.value.room ? room.value.room : room.value
+      const isAlreadyInRoom = roomStore.isUserInRoom(roomData)
 
-    if (!isAlreadyInRoom) {
-      // 如果用户不在房间中，尝试加入房间
-      console.log(`用户 ${userStore.username} 尝试加入房间 ${roomId.value}...`)
+      // 无论用户是否已在房间中，都发送joinRoom请求
+      // 这样可以确保在用户刷新页面或重新连接后能获取最新的聊天记录和房间状态
+      console.log(`用户 ${userStore.username} ${isAlreadyInRoom ? '已在房间中，但仍需要发送joinRoom以获取聊天记录' : '尝试加入房间'} ${roomId.value}...`)
 
       // 先尝试不带密码加入房间
       const success = await roomStore.joinRoom(roomId.value)
@@ -814,23 +993,21 @@ onMounted(async () => {
         if (roomStore.error && roomStore.error.includes('密码')) {
           // 显示密码输入对话框
           passwordDialogVisible.value = true
-          return
-        } else {
-          // 其他错误
+          // 不使用return，而是使用条件判断，确保finally块会执行
+        } else if (!isAlreadyInRoom) {
+          // 如果用户不在房间中且加入失败，显示错误并跳转
           ElMessage.error(roomStore.error || '加入房间失败')
           router.push('/rooms')
-          return
+          // 不使用return，而是使用条件判断，确保finally块会执行
+        } else {
+          // 如果用户已在房间中但重新加入失败，只显示警告但不跳转
+          console.warn('重新加入房间失败，但用户已在房间中，继续使用当前数据')
+          ElMessage.warning('更新房间数据失败，可能会看不到最新消息')
         }
+      } else {
+        console.log('成功发送joinRoom请求，等待WebSocket响应')
       }
-
-      // 直接加载房间详情，不再等待WebSocket事件
-      await refreshRoomDetail()
-    } else {
-      console.log('用户已在房间中，无需再次加入')
     }
-
-    // 设置房间事件监听器，依靠WebSocket通知刷新房间数据
-    setupRoomEventListeners()
 
   } catch (error) {
     console.error('加载房间失败:', error)
@@ -849,8 +1026,27 @@ const setupRefreshInterval = () => {
 
 // 组件卸载时清除事件监听器
 onUnmounted(() => {
+  console.log('组件卸载，清除事件监听器')
   // 清除所有房间事件监听器
   cleanupRoomEventListeners()
+
+  // 手动清除roomJoined事件监听器
+  try {
+    const allEvents = [
+      'roomJoined', 'roleChanged', 'roomStatusUpdate', 'spectatorJoined', 'playerJoined',
+      'spectatorLeft', 'playerLeft', 'spectatorMoveToPlayer', 'playerMoveToSpectator',
+      'gameStarted', 'playerStatusUpdate', 'teamUpdate', 'newMessage', 'socketError',
+      'socketReconnected'
+    ]
+
+    allEvents.forEach(eventName => {
+      window.removeEventListener(eventName, () => console.log(`尝试移除 ${eventName} 事件监听器`))
+    })
+
+    console.log('已手动清除所有事件监听器')
+  } catch (error) {
+    console.error('清除事件监听器时出错:', error)
+  }
 })
 
 // 将用户添加到观众席
@@ -880,7 +1076,7 @@ const addUserToSpectators = async () => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail()
+      await refreshRoomDetail(false)
 
       // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
@@ -927,7 +1123,7 @@ const joinRoom = async () => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail()
+      await refreshRoomDetail(false)
 
       // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
@@ -975,7 +1171,7 @@ const startGame = async () => {
       addSystemMessage('游戏开始！祈祷各位玩家游戏愉快')
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail()
+      await refreshRoomDetail(false)
     } else {
       throw new Error(roomStore.error || '开始游戏失败')
     }
@@ -1134,7 +1330,7 @@ const kickPlayer = async (targetUserId, targetUsername) => {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail()
+      await refreshRoomDetail(false)
 
       // 不再显示第二次成功提示，因为事件处理中会显示
       // 但仍然添加系统消息
@@ -1177,39 +1373,51 @@ const sendMessage = () => {
   }
 
   try {
+    // 确定频道和队伍ID
+    let channel = 'public'
+    let teamId = null
+
+    if (activeChat.value === 'team1' || activeChat.value === 'team2') {
+      channel = 'team'
+      teamId = activeChat.value === 'team1' ? 1 : 2
+    }
+
     // 构建消息对象
     const newMessage = {
       id: Date.now(),
       userId: userStore.userId,
       username: userStore.username || '玩家',
       content: chatInput.value.trim(),
-      time: new Date()
-    }
-
-    // 根据当前激活的聊天标签发送到对应频道
-    messages.value[activeChat.value].push(newMessage)
-
-    // 确定频道和队伍ID
-    let channel = 'public'
-    let teamId = null
-
-    if (activeChat.value === 'team') {
-      channel = 'team'
-      teamId = userTeamId.value
+      time: new Date(),
+      avatar: userStore.avatar || ''
     }
 
     // 通过WebSocket发送消息
     console.log(`向 ${activeChat.value} 频道发送消息: ${newMessage.content}`)
-    socketStore.sendRoomMessage(roomData.value.id, newMessage.content, 'text', channel, teamId)
+    socketStore.sendRoomMessage(roomData.value.id, newMessage.content, 'text', channel, teamId, (response) => {
+      if (response.status === 'success') {
+        console.log('消息发送成功:', response.data.message)
 
-    // 清空输入框
-    chatInput.value = ''
+        // 将消息添加到本地显示
+        messages.value[activeChat.value].push({
+          ...newMessage,
+          id: response.data.message.id, // 使用服务器返回的ID
+          time: new Date(response.data.message.createTime)
+        })
 
-    // 自动滚动到底部
-    nextTick(() => {
-      const chatBox = document.querySelector('.chat-messages')
-      if (chatBox) {
-        chatBox.scrollTop = chatBox.scrollHeight
+        // 清空输入框
+        chatInput.value = ''
+
+        // 自动滚动到底部
+        nextTick(() => {
+          const chatBox = document.querySelector('.chat-messages')
+          if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight
+          }
+        })
+      } else {
+        console.error('发送消息失败:', response.message)
+        ElMessage.error(response.message || '发送消息失败')
       }
     })
   } catch (error) {
@@ -1232,15 +1440,14 @@ const addSystemMessage = (content) => {
       userId: 'system',
       username: '系统',
       content: content,
-      time: new Date(),
-      isSystem: true,
-      // 添加与Socket事件兼容的字段
-      sender: 'system',
-      senderName: '系统',
-      timestamp: new Date().toISOString(),
+      avatar: '', // 系统消息没有头像
       type: 'system',
-      channel: 'public'
+      channel: 'public',
+      createTime: new Date().toISOString()
     }
+
+    // 使用辅助函数格式化消息
+    const formattedMessage = formatChatMessage(systemMessage)
 
     // 确保所有聊天频道都已初始化
     if (!messages.value) {
@@ -1257,7 +1464,7 @@ const addSystemMessage = (content) => {
         messages.value[channel] = []
       }
       // 创建每个频道的副本，以防止引用问题
-      const channelMessage = { ...systemMessage, channel }
+      const channelMessage = { ...formattedMessage, channel }
       messages.value[channel].push(channelMessage)
     })
 
@@ -1436,12 +1643,13 @@ watch(() => room.value?.status, (newStatus) => {
 // 监听路由参数变化，当房间ID变化时重新加载
 watch(() => route.params.id, (newId, oldId) => {
   if (newId !== oldId) {
-    refreshRoomDetail()
+    refreshRoomDetail(false)
   }
 })
 
 // 刷新房间详情
-const refreshRoomDetail = async () => {
+// autoJoin参数控制是否自动加入房间，默认为false避免循环调用
+const refreshRoomDetail = async (autoJoin = false) => {
   if (!roomId.value) {
     console.error('无法加载房间：没有房间ID')
     ElMessage.error('无法加载房间：没有房间ID')
@@ -1452,7 +1660,7 @@ const refreshRoomDetail = async () => {
   isLoading.value = true
 
   try {
-    console.log(`正在加载房间详情，ID: ${roomId.value}`)
+    console.log(`正在加载房间详情，ID: ${roomId.value}, autoJoin: ${autoJoin}`)
 
     // 确保 WebSocket 已连接
     if (!socketStore.isConnected) {
@@ -1516,19 +1724,29 @@ const refreshRoomDetail = async () => {
     // 检查用户是否已经在房间中
     const isAlreadyInRoom = roomStore.isUserInRoom(room.value)
 
-    if (!isAlreadyInRoom) {
-      // 如果用户不在房间中，尝试加入房间
+    // 只有当autoJoin为true时才发送joinRoom请求
+    if (autoJoin) {
+      console.log(`发送joinRoom请求，确保获取最新数据，房间ID: ${roomId.value}`)
       const success = await roomStore.joinRoom(roomId.value)
 
       if (!success) {
-        ElMessage.error(roomStore.error || '加入房间失败')
-        setTimeout(() => {
-          router.push('/rooms')
-        }, 1500);
-        return;
+        // 如果用户不在房间中且加入失败，显示错误
+        if (!isAlreadyInRoom) {
+          ElMessage.error(roomStore.error || '加入房间失败')
+          setTimeout(() => {
+            router.push('/rooms')
+          }, 1500);
+          return;
+        } else {
+          // 如果用户已在房间中但重新加入失败，只显示警告但不跳转
+          console.warn('重新加入房间失败，但用户已在房间中，继续使用当前数据')
+          ElMessage.warning('更新房间数据失败，可能会看不到最新消息')
+        }
+      } else {
+        console.log('成功发送joinRoom请求，等待WebSocket响应')
       }
     } else {
-      console.log('用户已在房间中，无需再次加入')
+      console.log('仅刷新房间数据，不自动加入房间')
     }
 
     // 使用isUserInRoom函数的结果来决定是否显示提示
@@ -1557,6 +1775,7 @@ const refreshRoomDetail = async () => {
     isLoading.value = false
   }
 }
+
 
 </script>
 

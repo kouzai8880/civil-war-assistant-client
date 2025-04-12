@@ -268,16 +268,22 @@ export const useRoomStore = defineStore('room', () => {
     }
   })
 
-  // 监听新消息事件
+  // 监听新消息事件 - 只更新房间数据中的消息列表，不处理显示
+  // 消息的显示由RoomDetail.vue中的handleNewMessage处理
   window.addEventListener('newMessage', (event) => {
-    console.log('收到newMessage事件:', event.detail)
+    console.log('收到newMessage事件（在room.js中）:', event.detail)
     if (event.detail && currentRoom.value) {
       // 确保消息列表存在
       if (!currentRoom.value.messages) {
         currentRoom.value.messages = []
       }
-      // 添加新消息
-      currentRoom.value.messages.push(event.detail)
+
+      // 检查消息是否已存在，避免重复添加
+      const messageExists = currentRoom.value.messages.some(msg => msg.id === event.detail.id)
+      if (!messageExists) {
+        // 添加新消息
+        currentRoom.value.messages.push(event.detail)
+      }
     }
   })
 
@@ -332,6 +338,39 @@ export const useRoomStore = defineStore('room', () => {
         const userRooms = response.data?.rooms || response.data || []
 
         console.log('获取我的房间成功，数量:', userRooms.length, userRooms)
+
+        // 获取我加入的房间（不是我创建的）
+        try {
+          // 获取所有房间列表
+          const allRoomsResponse = await roomApi.getRoomList({})
+          if (allRoomsResponse.status === 'success') {
+            const allRooms = allRoomsResponse.data?.rooms || allRoomsResponse.data || []
+
+            // 找出我加入的房间（我在玩家列表中但不是创建者）
+            const joinedRooms = allRooms.filter(room => {
+              // 检查用户是否在玩家列表中
+              const isInPlayers = room.players && Array.isArray(room.players) &&
+                                 room.players.some(player => player.userId === userStore.userId)
+              // 不是创建者但是在玩家列表中
+              return room.creatorId !== userStore.userId && isInPlayers
+            })
+
+            console.log('我加入的房间数量:', joinedRooms.length)
+
+            // 合并我创建的和我加入的房间
+            const combinedRooms = [...userRooms, ...joinedRooms]
+
+            // 去除重复的房间
+            const uniqueRooms = Array.from(new Map(combinedRooms.map(room => [room.id, room])).values())
+            console.log('我的所有房间数量（去重后）:', uniqueRooms.length)
+
+            return uniqueRooms
+          }
+        } catch (joinedRoomsError) {
+          console.error('获取我加入的房间失败:', joinedRoomsError)
+          // 如果获取加入的房间失败，仍然返回我创建的房间
+        }
+
         return userRooms
       } else {
         throw new Error(response.message || '获取我的房间失败')

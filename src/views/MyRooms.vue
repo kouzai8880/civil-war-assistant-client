@@ -22,7 +22,7 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 // 常用的英雄头像列表，用于随机分配
 const championIcons = [
-  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius', 
+  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius',
   'Ezreal', 'Garen', 'Jinx', 'Lux', 'Malphite',
   'Nami', 'Syndra', 'Thresh', 'Yasuo', 'Zed'
 ]
@@ -41,7 +41,7 @@ onMounted(async () => {
     router.push('/login')
     return
   }
-  
+
   loadMyRooms()
 })
 
@@ -52,27 +52,38 @@ const loadMyRooms = async () => {
     // 加载我创建的房间，API会根据当前用户token识别用户
     console.log('正在获取我的房间，当前用户ID:', userStore.userId)
     const rooms = await roomStore.fetchMyRooms()
-    
+
     console.log('API返回的原始房间数据:', JSON.stringify(rooms))
-    
+
     if (rooms && rooms.length > 0) {
-      // 确保只显示当前用户创建的房间
-      const myCreatedRooms = rooms.filter(room => 
-        room.creatorId === userStore.userId
-      )
-      
-      console.log(`获取到房间总数: ${rooms.length}, 我创建的房间: ${myCreatedRooms.length}, 当前用户ID: ${userStore.userId}`)
-      console.log('我创建的房间详情:', JSON.stringify(myCreatedRooms))
-      
+      console.log(`获取到房间总数: ${rooms.length}, 当前用户ID: ${userStore.userId}`)
+
+      // 分为我创建的房间和我加入的房间
+      const myCreatedRooms = rooms.filter(room => room.creatorId === userStore.userId)
+      const myJoinedRooms = rooms.filter(room => {
+        // 检查用户是否在玩家列表中
+        const isInPlayers = room.players && Array.isArray(room.players) &&
+                           room.players.some(player => player.userId === userStore.userId)
+        // 不是创建者但是在玩家列表中
+        return room.creatorId !== userStore.userId && isInPlayers
+      })
+
+      console.log('我创建的房间数量:', myCreatedRooms.length)
+      console.log('我加入的房间数量:', myJoinedRooms.length)
+
+      // 合并我创建的和我加入的房间
+      const allMyRooms = [...myCreatedRooms, ...myJoinedRooms]
+      console.log('我的所有房间数量:', allMyRooms.length)
+
       // 按状态分类房间
-      myRooms.value = myCreatedRooms.filter(room => 
+      myRooms.value = allMyRooms.filter(room =>
         room.status === 'waiting' || room.status === 'picking' || room.status === 'gaming'
       )
-      
-      historicalRooms.value = myCreatedRooms.filter(room => 
+
+      historicalRooms.value = allMyRooms.filter(room =>
         room.status === 'ended'
       )
-      
+
       console.log('已加载房间：', myRooms.value.length, '个当前房间，', historicalRooms.value.length, '个历史房间')
     } else {
       console.log('没有找到任何房间')
@@ -92,24 +103,24 @@ const loadMyRooms = async () => {
 // 进入房间
 const enterRoom = (roomId) => {
   // 查找房间信息
-  const room = myRooms.value.find(r => r.id === roomId) || 
+  const room = myRooms.value.find(r => r.id === roomId) ||
                historicalRooms.value.find(r => r.id === roomId);
-  
+
   if (!room) {
     ElMessage.error('房间信息不存在');
     return;
   }
-  
+
   // 检查用户是否已经在房间中（作为玩家或观众）
   const isAlreadyInRoom = room.players && room.players.some(player => player.userId === userStore.userId);
   const isSpectator = room.spectators && room.spectators.some(spectator => spectator.userId === userStore.userId);
-  
+
   if (isAlreadyInRoom || isSpectator) {
     console.log('用户已在房间中，直接跳转到房间详情页');
     router.push(`/room/${roomId}`);
     return;
   }
-  
+
   // 如果用户不在房间中，尝试加入房间
   try {
     // 调用API加入房间
@@ -151,10 +162,10 @@ const deleteRoom = async (roomId) => {
   try {
     // 模拟API调用，删除房间
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // 从列表中移除
     historicalRooms.value = historicalRooms.value.filter(room => room.id !== roomId)
-    
+
     ElMessage.success('房间已删除')
   } catch (error) {
     ElMessage.error('删除房间失败')
@@ -195,35 +206,41 @@ const viewRoomDetail = (roomId) => {
       <h1>我的房间</h1>
       <button class="btn btn-primary" @click="createRoom">创建新房间</button>
     </div>
-    
+
     <div class="tabs">
-      <div 
-        :class="['tab', activeTab === 'current' ? 'active' : '']" 
+      <div
+        :class="['tab', activeTab === 'current' ? 'active' : '']"
         @click="activeTab = 'current'"
       >
         当前房间
       </div>
-      <div 
-        :class="['tab', activeTab === 'history' ? 'active' : '']" 
+      <div
+        :class="['tab', activeTab === 'history' ? 'active' : '']"
         @click="activeTab = 'history'"
       >
         历史房间
       </div>
     </div>
-    
+
     <!-- 当前房间列表 -->
     <div v-if="activeTab === 'current'" class="tab-content active">
       <div v-if="myRooms.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
         <div class="empty-text">您还没有创建或加入任何房间</div>
+        <div class="empty-subtext">您可以创建新房间或在房间列表中加入其他玩家的房间</div>
         <button class="btn btn-primary" @click="createRoom">创建房间</button>
       </div>
-      
+
       <div v-else class="room-grid">
         <div v-for="room in myRooms" :key="room.id" class="room-card">
           <div class="room-header">
             <h3 class="room-title">{{ room.name }}</h3>
-            <span :class="['room-status', statusClass(room.status)]">{{ statusText(room.status) }}</span>
+            <div class="room-status-container">
+              <span :class="['room-status', statusClass(room.status)]">{{ statusText(room.status) }}</span>
+              <span :class="['room-role', room.creatorId === userStore.userId ? 'role-creator' : 'role-player']">
+                {{ room.creatorId === userStore.userId ? '我的房间' : '已加入' }}
+              </span>
+            </div>
           </div>
           <div class="room-info">
             <span>创建于: {{ new Date(room.createTime).toLocaleString() }}</span>
@@ -240,11 +257,11 @@ const viewRoomDetail = (roomId) => {
             </div>
           </div>
           <div class="room-players">
-            <img 
-              v-for="(player, index) in (room.players || []).slice(0, 6)" 
-              :key="index" 
-              :src="player.avatar || getChampionIcon(index)" 
-              :alt="player.name" 
+            <img
+              v-for="(player, index) in (room.players || []).slice(0, 6)"
+              :key="index"
+              :src="player.avatar || getChampionIcon(index)"
+              :alt="player.name"
               class="player-avatar"
             >
             <span v-if="room.players && room.players.length > 6" class="more-players">+{{ room.players.length - 6 }}</span>
@@ -255,20 +272,26 @@ const viewRoomDetail = (roomId) => {
         </div>
       </div>
     </div>
-    
+
     <!-- 历史房间列表 -->
     <div v-if="activeTab === 'history'" class="tab-content active">
       <div v-if="historicalRooms.length === 0" class="empty-state">
         <div class="empty-icon">📜</div>
         <div class="empty-text">您还没有历史房间记录</div>
+        <div class="empty-subtext">当您创建或加入的房间完成游戏后，将会显示在这里</div>
         <button class="btn btn-primary" @click="createRoom">创建房间</button>
       </div>
-      
+
       <div v-else class="room-grid">
         <div v-for="room in historicalRooms" :key="room.id" class="room-card">
           <div class="room-header">
             <h3 class="room-title">{{ room.name }}</h3>
-            <span class="room-status status-completed">已完成</span>
+            <div class="room-status-container">
+              <span class="room-status status-completed">已完成</span>
+              <span :class="['room-role', room.creatorId === userStore.userId ? 'role-creator' : 'role-player']">
+                {{ room.creatorId === userStore.userId ? '我的房间' : '已加入' }}
+              </span>
+            </div>
           </div>
           <div :class="['match-result', room.result === 'win' ? 'win' : 'lose']">
             <div class="result-indicator"></div>
@@ -289,11 +312,11 @@ const viewRoomDetail = (roomId) => {
             </div>
           </div>
           <div class="room-players">
-            <img 
-              v-for="(player, index) in (room.players || []).slice(0, 5)" 
-              :key="index" 
-              :src="player.avatar || getChampionIcon(index)" 
-              :alt="player.name" 
+            <img
+              v-for="(player, index) in (room.players || []).slice(0, 5)"
+              :key="index"
+              :src="player.avatar || getChampionIcon(index)"
+              :alt="player.name"
               class="player-avatar"
             >
             <span v-if="room.players && room.players.length > 5" class="more-players">+{{ room.players.length - 5 }}</span>
@@ -368,8 +391,17 @@ const viewRoomDetail = (roomId) => {
 }
 
 .empty-text {
+  font-size: 1.2rem;
   color: #8b8fa3;
+  margin-bottom: 0.5rem;
+}
+
+.empty-subtext {
+  font-size: 0.9rem;
+  color: #a0a4b8;
   margin-bottom: 1.5rem;
+  text-align: center;
+  max-width: 80%;
 }
 
 .room-grid {
@@ -405,10 +437,34 @@ const viewRoomDetail = (roomId) => {
   margin: 0;
 }
 
+.room-status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
 .room-status {
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
   font-size: 0.8rem;
+}
+
+.room-role {
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.role-creator {
+  background-color: #8e44ad;
+  color: white;
+}
+
+.role-player {
+  background-color: #27ae60;
+  color: white;
 }
 
 .status-waiting {
@@ -548,4 +604,4 @@ const viewRoomDetail = (roomId) => {
   background-color: #fda92c;
   color: #fff;
 }
-</style> 
+</style>

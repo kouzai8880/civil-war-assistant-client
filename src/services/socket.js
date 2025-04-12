@@ -168,9 +168,10 @@ export const roomApi = {
   },
 
   // 发送房间消息
-  sendRoomMessage: (roomId, content, type = 'text', channel = 'public', teamId = null) => {
+  sendRoomMessage: (roomId, content, type = 'text', channel = 'public', teamId = null, callback) => {
     if (!socket?.connected) {
       console.error('WebSocket未连接，无法发送房间消息')
+      if (callback) callback({ status: 'error', message: 'WebSocket未连接' })
       return
     }
 
@@ -178,6 +179,7 @@ export const roomApi = {
     const messageData = {
       roomId,
       content,
+      type,
       channel
     }
 
@@ -187,7 +189,10 @@ export const roomApi = {
     }
 
     console.log('发送房间消息:', messageData)
-    socket.emit('sendMessage', messageData)
+    socket.emit('sendMessage', messageData, (response) => {
+      console.log('发送消息响应:', response)
+      if (callback) callback(response)
+    })
   }
 }
 

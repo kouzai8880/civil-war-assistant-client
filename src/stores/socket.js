@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getSocket, connectSocket, disconnectSocket, lobbyApi, roomApi, voiceApi } from '../services/socket'
+import { getSocket as getSocketService, connectSocket, disconnectSocket, lobbyApi, roomApi, voiceApi } from '../services/socket'
 import { useUserStore } from './user'
 
 /**
@@ -155,8 +155,6 @@ export const useSocketStore = defineStore('socket', () => {
       if (password) {
         joinData.password = password
       }
-
-      console.log(`发送joinRoom事件，加入房间 ${roomId}`, password ? '带密码' : '无密码')
 
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
@@ -388,12 +386,10 @@ export const useSocketStore = defineStore('socket', () => {
 
     // 房间基础事件
     on('roomJoined', (response) => {
-      console.log('[WebSocket] 加入房间成功:', response)
       if (response.status === 'success') {
         const roomData = response.data.room
         currentRoomId.value = roomData.id
         // 将事件分发给其他组件
-        console.log('[WebSocket] 分发roomJoined事件到窗口')
         try {
           window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
           console.log('[WebSocket] roomJoined事件分发成功')
@@ -598,7 +594,7 @@ export const useSocketStore = defineStore('socket', () => {
 
   // 注册事件监听
   const on = (event, callback) => {
-    const socket = getSocket()
+    const socket = getSocketService()
     if (!socket) return
 
     // 保存监听器引用，以便后续移除
@@ -608,7 +604,7 @@ export const useSocketStore = defineStore('socket', () => {
 
   // 移除事件监听
   const off = (event) => {
-    const socket = getSocket()
+    const socket = getSocketService()
     if (!socket) return
 
     if (listeners.value[event]) {
@@ -619,7 +615,7 @@ export const useSocketStore = defineStore('socket', () => {
 
   // 清理所有监听器
   const cleanupListeners = () => {
-    const socket = getSocket()
+    const socket = getSocketService()
     if (!socket) return
 
     Object.keys(listeners.value).forEach(event => {
@@ -627,6 +623,11 @@ export const useSocketStore = defineStore('socket', () => {
     })
 
     listeners.value = {}
+  }
+
+  // 获取Socket实例
+  const getSocket = () => {
+    return getSocketService()
   }
 
   // 加入语音频道
@@ -685,6 +686,50 @@ export const useSocketStore = defineStore('socket', () => {
     }
   }
 
+  // 队长选择玩家
+  const captainSelectPlayer = (roomId, teamId, playerId, callback) => {
+    if (!connected.value) {
+      error.value = 'WebSocket未连接，无法选择玩家'
+      return false
+    }
+
+    try {
+      console.log(`发送captain.selectPlayer事件，队长选择玩家，房间ID: ${roomId}, 队伍ID: ${teamId}, 玩家ID: ${playerId}`)
+      const socket = getSocket()
+      if (socket) {
+        socket.emit('captain.selectPlayer', { roomId, teamId, playerId }, callback)
+        return true
+      } else {
+        throw new Error('WebSocket实例不存在')
+      }
+    } catch (err) {
+      error.value = err.message || '选择玩家失败'
+      return false
+    }
+  }
+
+  // 队长选择红蓝方
+  const captainSelectSide = (roomId, teamId, side, callback) => {
+    if (!connected.value) {
+      error.value = 'WebSocket未连接，无法选择红蓝方'
+      return false
+    }
+
+    try {
+      console.log(`发送captain.selectSide事件，队长选择红蓝方，房间ID: ${roomId}, 队伍ID: ${teamId}, 阵营: ${side}`)
+      const socket = getSocket()
+      if (socket) {
+        socket.emit('captain.selectSide', { roomId, teamId, side }, callback)
+        return true
+      } else {
+        throw new Error('WebSocket实例不存在')
+      }
+    } catch (err) {
+      error.value = err.message || '选择红蓝方失败'
+      return false
+    }
+  }
+
   return {
     // 状态
     connected,
@@ -717,6 +762,12 @@ export const useSocketStore = defineStore('socket', () => {
     joinAsPlayer,
     kickPlayer,
     joinVoiceChannel,
-    getRoomDetail
+    getRoomDetail,
+    captainSelectPlayer,
+    captainSelectSide,
+    on,
+    off,
+    cleanupListeners,
+    getSocket
   }
 })

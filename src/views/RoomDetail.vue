@@ -42,25 +42,18 @@ const currentUserId = computed(() => userStore.userId)
 
 // 用户是否已准备
 const isReady = computed(() => {
-  if (!room.value || !currentUserId.value) return false
-
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  if (!roomData.value || !currentUserId.value) return false
 
   // 如果没有玩家列表，返回false
-  if (!roomData.players || !Array.isArray(roomData.players)) return false
+  if (!players.value || !Array.isArray(players.value)) return false
 
-  const currentPlayer = roomData.players.find(p => p.userId === currentUserId.value)
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
   return currentPlayer && currentPlayer.status === 'ready'
 })
 
 // 用户是否是房主
 const isCreator = computed(() => {
   if (!roomData.value || !currentUserId.value) return false
-
-  // 输出调试信息
-  console.log('计算isCreator - 当前用户ID:', currentUserId.value)
-  console.log('计算isCreator - 房间创建者ID:', roomData.value.creatorId)
 
   return roomData.value.creatorId === currentUserId.value
 })
@@ -118,8 +111,8 @@ const pickingPhase = ref({
 // 加载状态
 const isLoading = ref(false)
 
-// 选择角色弹窗
-const characterPickingVisible = ref(false)
+// 已移除选择角色弹窗
+// const characterPickingVisible = ref(false)
 
 // 选择边弹窗
 const sideSelectorVisible = ref(false)
@@ -170,20 +163,70 @@ const getChampionIcon = (index) => {
   return `https://ddragon.leagueoflegends.com/cdn/13.12.1/img/champion/${champion}.png`
 }
 
-// 模拟角色列表
-const characters = ref([
-  { id: 1, name: '玩家小明', avatar: getChampionIcon(0) },
-  { id: 2, name: '玩家小红', avatar: getChampionIcon(1) },
-  { id: 3, name: '玩家小刚', avatar: getChampionIcon(2) },
-  { id: 4, name: '玩家小丽', avatar: getChampionIcon(3) },
-  { id: 5, name: '玩家小华', avatar: getChampionIcon(4) },
-  { id: 6, name: '玩家小芳', avatar: getChampionIcon(5) },
-  { id: 7, name: '玩家小龙', avatar: getChampionIcon(6) },
-  { id: 8, name: '玩家小雪', avatar: getChampionIcon(7) },
-])
-
 // 已选择的玩家
 const pickedCharacters = ref([])
+
+// 待选玩家计算属性
+const availablePlayers = computed(() => {
+  if (!roomData.value || !players.value) return []
+
+  // 获取队伍信息
+  const teams = roomData.value.teams || []
+
+  // 获取队长的用户ID
+  const captainIds = teams.map(team => team.captainId?.id || team.captainId).filter(Boolean)
+
+  // 获取已经被选择的玩家ID
+  const pickedPlayerIds = pickedCharacters.value.map(char => char.characterId)
+
+  console.log('计算待选玩家，队长IDs:', captainIds)
+  console.log('计算待选玩家，已选择玩家IDs:', pickedPlayerIds)
+  console.log('计算待选玩家，所有玩家:', players.value)
+
+  // 从玩家列表中筛选出未被选择的非队长玩家
+  const filteredPlayers = players.value
+    .filter(player => {
+      // 排除队长
+      if (captainIds.includes(player.userId)) {
+        console.log(`玩家 ${player.username} 是队长，排除`)
+        return false
+      }
+
+      // 排除已经被选择的玩家
+      if (pickedPlayerIds.includes(player.userId)) {
+        console.log(`玩家 ${player.username} 已被选择，排除`)
+        return false
+      }
+
+      // 排除已经分配到队伍的玩家
+      if (player.teamId) {
+        // 如果玩家已经分配到队伍，但不在pickedCharacters中，则添加到pickedCharacters
+        if (!pickedPlayerIds.includes(player.userId)) {
+          console.log(`玩家 ${player.username} 已分配到队伍 ${player.teamId}，但不在pickedCharacters中，添加到pickedCharacters`)
+          pickedCharacters.value.push({
+            characterId: player.userId,
+            characterName: player.username,
+            characterAvatar: player.avatar || getChampionIcon(players.value.indexOf(player)),
+            teamId: player.teamId,
+            pickOrder: pickedCharacters.value.length + 1
+          })
+        }
+        console.log(`玩家 ${player.username} 已分配到队伍 ${player.teamId}，排除`)
+        return false
+      }
+
+      console.log(`玩家 ${player.username} 可选择`)
+      return true
+    })
+    .map(player => ({
+      id: player.userId,
+      name: player.username,
+      avatar: player.avatar || getChampionIcon(players.value.indexOf(player))
+    }))
+
+  console.log('计算待选玩家结果:', filteredPlayers)
+  return filteredPlayers
+})
 
 // 测试用 - 模拟房间状态设置
 const setRoomPhase = (phase) => {
@@ -279,18 +322,23 @@ const setRoomPhase = (phase) => {
       });
     }
 
-    // 确保有一些玩家被选择了
-    if (pickedCharacters.value.length === 0) {
-      // 为两个队伍各添加几个角色
-      for (let i = 0; i < 4; i++) {
+    // 如果没有选择玩家，则使用后端返回的队伍信息
+    if (pickedCharacters.value.length === 0 && roomData.value?.teams) {
+      // 遍历玩家列表，将已经分配到队伍的非队长玩家添加到已选择列表
+      const teamPlayers = players.value.filter(p => p.teamId && !p.isCaptain);
+
+      console.log('使用后端返回的队伍信息初始化已选择玩家列表:', teamPlayers);
+
+      // 将已分配队伍的玩家添加到已选择列表
+      teamPlayers.forEach((player, index) => {
         pickedCharacters.value.push({
-          characterId: characters.value[i].id,
-          characterName: characters.value[i].name,
-          characterAvatar: characters.value[i].avatar,
-          teamId: i < 2 ? 1 : 2,
-          pickOrder: i + 1
+          characterId: player.userId,
+          characterName: player.username,
+          characterAvatar: player.avatar || getChampionIcon(index),
+          teamId: player.teamId,
+          pickOrder: index + 1
         });
-      }
+      });
     }
 
     addSystemMessage('选边阶段开始，由一队队长选择红蓝方')
@@ -308,9 +356,13 @@ const setRoomPhase = (phase) => {
 
 // 选择玩家
 const pickPlayer = (player) => {
-  if (!room.value || !isCaptain.value) return
+  if (!roomData.value || !isCaptain.value) {
+    console.log('不是队长或房间数据不存在，无法选择玩家')
+    return
+  }
 
   // 检查当前是否轮到该队长选择
+  console.log('当前选人队伍:', pickingPhase.value.currentTeam, '用户队伍:', userTeamId.value)
   if (pickingPhase.value.currentTeam !== userTeamId.value) {
     ElMessage.warning('不是您的选择回合')
     return
@@ -322,26 +374,30 @@ const pickPlayer = (player) => {
     return
   }
 
-  // 添加到已选择列表
-  pickedCharacters.value.push({
-    characterId: player.id,
-    characterName: player.name,
-    characterAvatar: player.avatar,
-    teamId: userTeamId.value,
-    pickOrder: pickingPhase.value.currentPick
-  })
+  console.log('选择玩家:', player)
 
-  // 添加系统消息
-  addSystemMessage(`${userTeamId.value === 1 ? '一' : '二'}队选择了玩家 ${player.name}`)
-
-  // 更新选择进度
-  updatePickingProgress()
+  // 使用WebSocket API选择玩家
+  socketStore.captainSelectPlayer(
+    roomId.value,
+    userTeamId.value,
+    player.id,
+    (response) => {
+      if (response.status === 'success') {
+        console.log('选择玩家成功:', response)
+        // 服务器会广播 player.selected 事件，所有客户端都会收到
+        // 所以这里不需要手动更新UI
+      } else {
+        console.error('选择玩家失败:', response.message)
+        ElMessage.error(response.message || '选择玩家失败')
+      }
+    }
+  )
 }
 
 // 更新选择进度
 const updatePickingProgress = () => {
   // 确定使用的BP模式
-  const mode = room.value.pickMode || '12221';
+  const mode = roomData.value?.pickMode || '12221';
 
   // 根据模式设置选人模式
   if (mode === '12221') {
@@ -358,6 +414,11 @@ const updatePickingProgress = () => {
   const totalPicks = getTotalPickCount();
   if (pickedCharacters.value.length >= totalPicks) {
     // 进入选边阶段
+    console.log('所有玩家已选择完毕，进入选边阶段');
+    // 这里可以添加调用后端 API 的代码，通知服务器进入选边阶段
+    // 例如: await roomApi.updateRoomStatus(roomId.value, 'side-picking')
+
+    // 模拟更新房间状态
     setRoomPhase('side-picking');
     return;
   }
@@ -366,15 +427,38 @@ const updatePickingProgress = () => {
   pickingPhase.value.currentPick++;
 
   // 确定下一个选择的队伍
-  const pickIndex = Math.floor((currentPick - 1) / 2);
-  if (pickIndex < pattern.length) {
-    pickingPhase.value.currentTeam = pattern[pickIndex];
+  // 根据当前选择进度和选人模式确定下一个选择的队伍
+  console.log('当前选人模式:', mode);
+  console.log('当前选人进度:', currentPick);
+  console.log('当前选人模式数组:', pattern);
+
+  // 计算当前处于哪个阶段
+  let totalPicked = 0;
+  let phaseIndex = 0;
+
+  // 遍历选人模式数组，找出当前处于哪个阶段
+  for (let i = 0; i < pattern.length; i++) {
+    totalPicked += pattern[i];
+    // 如果当前选择数量小于累计选择数量，则当前处于该阶段
+    if (currentPick < totalPicked) {
+      phaseIndex = i;
+      break;
+    }
+  }
+
+  // 确定下一个选择的队伍
+  if (phaseIndex < pattern.length) {
+    // 如果是奇数阶段，则是一队选择，否则是二队选择
+    pickingPhase.value.currentTeam = (phaseIndex % 2 === 0) ? 1 : 2;
+    console.log(`当前处于第 ${phaseIndex + 1} 阶段，下一个选择的队伍是 ${pickingPhase.value.currentTeam} 队`);
   } else {
     // 如果超出了pattern的范围，服务器会自动选择
     // 这里模拟自动选择，默认选择最后一个队伍
     const remainingCount = totalPicks - pickedCharacters.value.length;
     if (remainingCount > 0) {
-      autoPickForTeam(pickingPhase.value.currentTeam);
+      // 使用上一个选择的队伍的对手队伍
+      const nextTeam = pickingPhase.value.currentTeam === 1 ? 2 : 1;
+      autoPickForTeam(nextTeam);
     } else {
       setRoomPhase('side-picking');
       return;
@@ -387,19 +471,28 @@ const updatePickingProgress = () => {
 
 // 获取总共需要选择的玩家数量
 const getTotalPickCount = () => {
-  return 8; // 两个队长 + 8个玩家 = 10人
+  // 获取队伍信息
+  const teams = roomData.value?.teams || [];
+
+  // 获取队长数量
+  const captainCount = teams.length;
+
+  // 总玩家数量
+  const totalPlayerCount = roomData.value?.playerCount || 10;
+
+  // 需要选择的玩家数量 = 总玩家数量 - 队长数量
+  return totalPlayerCount - captainCount;
 }
 
 // 自动为队伍选择玩家
 const autoPickForTeam = (teamId) => {
-  // 找到所有未选择的玩家
-  const selectedIds = pickedCharacters.value.map(c => c.characterId);
-  const availablePlayers = characters.value.filter(c => !selectedIds.includes(c.id));
+  // 使用计算属性获取可用玩家
+  const availablePlayersList = availablePlayers.value;
 
-  if (availablePlayers.length > 0) {
+  if (availablePlayersList.length > 0) {
     // 随机选择一个玩家
-    const randomIndex = Math.floor(Math.random() * availablePlayers.length);
-    const selectedPlayer = availablePlayers[randomIndex];
+    const randomIndex = Math.floor(Math.random() * availablePlayersList.length);
+    const selectedPlayer = availablePlayersList[randomIndex];
 
     // 添加到已选择列表
     pickedCharacters.value.push({
@@ -410,12 +503,112 @@ const autoPickForTeam = (teamId) => {
       pickOrder: pickingPhase.value.currentPick
     });
 
+    // 尝试在后端更新玩家的队伍ID
+    try {
+      // 这里可以添加调用后端 API 的代码
+      console.log(`将玩家 ${selectedPlayer.name} 分配到队伍 ${teamId}`)
+    } catch (error) {
+      console.error('更新玩家队伍失败:', error)
+    }
+
     // 添加系统消息
     addSystemMessage(`系统为${teamId === 1 ? '一' : '二'}队自动选择了 ${selectedPlayer.name}`);
 
     // 继续更新选择进度
     updatePickingProgress();
   }
+}
+
+// 初始化已选择玩家列表
+const initializePickedCharacters = () => {
+  // 清空已选择列表
+  pickedCharacters.value = []
+
+  // 获取队伍信息
+  const teams = roomData.value?.teams || []
+
+  // 获取队长的用户ID
+  const captainIds = teams.map(team => team.captainId?.id || team.captainId).filter(Boolean)
+
+  console.log('初始化已选择玩家列表，队长IDs:', captainIds)
+  console.log('初始化已选择玩家列表，所有玩家:', players.value)
+
+  // 遍历玩家列表，将已经分配到队伍的非队长玩家添加到已选择列表
+  const teamPlayers = players.value.filter(p => {
+    // 必须有teamId属性
+    if (!p.teamId) return false
+
+    // 不能是队长
+    if (captainIds.includes(p.userId)) return false
+
+    return true
+  })
+
+  console.log('初始化已选择玩家列表，已分配队伍的非队长玩家:', teamPlayers)
+
+  // 将已分配队伍的玩家添加到已选择列表
+  teamPlayers.forEach((player, index) => {
+    pickedCharacters.value.push({
+      characterId: player.userId,
+      characterName: player.username,
+      characterAvatar: player.avatar || getChampionIcon(index),
+      teamId: player.teamId,
+      pickOrder: index + 1
+    })
+  })
+
+  console.log('初始化已选择玩家列表完成，结果:', pickedCharacters.value)
+
+  // 更新选人阶段状态
+  updatePickingPhaseState()
+}
+
+// 更新选人阶段状态
+const updatePickingPhaseState = () => {
+  if (!roomData.value || roomData.value.status !== 'picking') return
+
+  // 如果服务器返回了选人阶段数据，使用服务器的数据
+  if (roomData.value.pickPhase) {
+    console.log('使用服务器返回的选人阶段数据:', roomData.value.pickPhase)
+    pickingPhase.value = { ...roomData.value.pickPhase }
+    return
+  }
+
+  // 如果没有服务器数据，根据已选择的玩家数量计算当前选人阶段
+  const mode = roomData.value?.pickMode || '12221';
+  const pattern = mode === '12221' ? [1, 2, 2, 2, 1] : [1, 2, 2, 1, 1];
+
+  // 计算已选择的玩家数量
+  const pickedCount = pickedCharacters.value.length;
+
+  // 计算当前处于哪个阶段
+  let totalPicked = 0;
+  let phaseIndex = 0;
+
+  // 遍历选人模式数组，找出当前处于哪个阶段
+  for (let i = 0; i < pattern.length; i++) {
+    totalPicked += pattern[i];
+    // 如果已选择数量小于累计选择数量，则当前处于该阶段
+    if (pickedCount < totalPicked) {
+      phaseIndex = i;
+      break;
+    }
+  }
+
+  // 确定当前选择的队伍
+  const currentTeam = (phaseIndex % 2 === 0) ? 1 : 2;
+
+  console.log(`根据已选择玩家数量(${pickedCount})计算，当前处于第 ${phaseIndex + 1} 阶段，当前选择队伍是 ${currentTeam} 队`);
+
+  // 更新选人阶段状态
+  pickingPhase.value.currentTeam = currentTeam;
+  pickingPhase.value.currentPick = pickedCount + 1;
+  pickingPhase.value.pickPattern = pattern;
+
+  // 强制触发UI更新
+  nextTick(() => {
+    console.log('强制触发UI更新，当前选人队伍:', pickingPhase.value.currentTeam);
+  });
 }
 
 // 刷新定时器
@@ -443,8 +636,14 @@ const loadRoomDetail = async () => {
     }
 
     // 如果房间已经在选人阶段，初始化选人状态
-    if (roomData.status === 'picking' && roomData.pickPhase) {
-      pickingPhase.value = { ...roomData.pickPhase }
+    if (roomData.status === 'picking') {
+      // 如果有选人阶段数据，使用服务器返回的数据
+      if (roomData.pickPhase) {
+        pickingPhase.value = { ...roomData.pickPhase }
+      }
+
+      // 初始化已选择玩家列表
+      initializePickedCharacters()
     }
 
     // 如果房间已经在选边阶段，初始化选边状态
@@ -477,7 +676,6 @@ const setupRoomEventListeners = () => {
   // 添加事件监听器
   console.log('添加roomJoined事件监听器')
   window.addEventListener('roomJoined', (event) => {
-    console.log('直接在监听器中捕获到roomJoined事件:', event.detail)
     handleRoomJoined(event)
   })
 
@@ -495,6 +693,35 @@ const setupRoomEventListeners = () => {
   window.addEventListener('newMessage', handleNewMessage)
   window.addEventListener('socketError', handleSocketError)
   window.addEventListener('socketReconnected', handleSocketReconnected)
+
+  // 添加选人选边相关的事件监听器
+  // 使用自定义事件监听器
+  window.addEventListener('playerSelected', (event) => {
+    console.log('收到playerSelected事件:', event.detail)
+    handlePlayerSelected(event.detail)
+  })
+
+  window.addEventListener('teamSelectedSide', (event) => {
+    console.log('收到teamSelectedSide事件:', event.detail)
+    handleTeamSelectedSide(event.detail)
+  })
+
+  // 注册服务器事件到全局事件
+  const socket = socketStore.getSocket()
+  if (socket) {
+    socket.on('player.selected', (data) => {
+      console.log('[WebSocket事件] player.selected:', data)
+      window.dispatchEvent(new CustomEvent('playerSelected', { detail: data }))
+    })
+
+    socket.on('team.selected_side', (data) => {
+      console.log('[WebSocket事件] team.selected_side:', data)
+      window.dispatchEvent(new CustomEvent('teamSelectedSide', { detail: data }))
+    })
+  } else {
+    console.error('无法获取Socket实例，无法注册选人选边事件')
+  }
+
   console.log('已添加房间事件监听器')
 }
 // 清除房间事件监听器
@@ -517,6 +744,18 @@ const cleanupRoomEventListeners = () => {
   window.removeEventListener('newMessage', handleNewMessage)
   window.removeEventListener('socketError', handleSocketError)
   window.removeEventListener('socketReconnected', handleSocketReconnected)
+
+  // 移除选人选边相关的事件监听器
+  window.removeEventListener('playerSelected', handlePlayerSelected)
+  window.removeEventListener('teamSelectedSide', handleTeamSelectedSide)
+
+  // 移除Socket.io事件监听器
+  const socket = socketStore.getSocket()
+  if (socket) {
+    socket.off('player.selected')
+    socket.off('team.selected_side')
+  }
+
   console.log('已清除房间事件监听器')
 }
 
@@ -656,7 +895,6 @@ const handleRoomJoined = (event) => {
       // 不再调用refreshRoomDetail()，避免循环调用
       // 直接使用事件中的房间数据更新本地房间数据
       if (event.detail.data?.room) {
-        console.log('使用roomJoined事件中的房间数据更新本地房间数据');
         roomStore.setCurrentRoom(event.detail.data);
       }
 
@@ -689,7 +927,30 @@ const handleRoomStatusUpdate = (event) => {
   console.log('收到roomStatusUpdate事件:', event.detail)
   if (event.detail && event.detail.roomId === roomId.value) {
     refreshRoomDetail(false)
-    if (event.detail.status === 'gaming') {
+
+    // 如果房间状态变为选人阶段，初始化选人阶段
+    if (event.detail.status === 'picking') {
+      console.log('房间状态变为选人阶段，初始化选人阶段')
+
+      // 初始化选人阶段
+      const mode = roomData.value?.pickMode || '12221';
+      console.log('选人模式:', mode);
+
+      // 设置选人模式
+      pickingPhase.value = {
+        currentPick: 1,
+        currentTeam: 1, // 默认从一队开始
+        pickPattern: mode === '12221' ? [1, 2, 2, 2, 1] : [1, 2, 2, 1, 1]
+      }
+
+      // 初始化已选择玩家列表
+      initializePickedCharacters()
+
+      // 添加系统消息
+      addSystemMessage('进入选人阶段，轮到一队队长选择玩家')
+
+      ElMessage.success('进入选人阶段')
+    } else if (event.detail.status === 'gaming') {
       ElMessage.success('游戏已开始')
     } else if (event.detail.status === 'ended') {
       ElMessage.info('游戏已结束')
@@ -876,6 +1137,110 @@ const handleSocketReconnected = (event) => {
   }
 }
 
+// 处理玩家被选择事件
+const handlePlayerSelected = (data) => {
+  console.log('收到player.selected事件:', data)
+
+  // 处理数组格式的数据
+  if (Array.isArray(data) && data.length > 0) {
+    console.log('收到数组格式的player.selected事件，使用第一个元素')
+    data = data[0]
+  }
+
+  // 将玩家从未分配列表移动到相应队伍
+  if (data && data.userId) {
+    console.log('处理玩家选择数据:', data)
+
+    // 在玩家列表中找到该玩家
+    const player = players.value.find(p => p.userId === data.userId)
+    if (player) {
+      console.log(`找到玩家 ${player.username}，当前队伍ID: ${player.teamId}，新队伍ID: ${data.teamId}`)
+
+      // 更新玩家的队伍ID
+      player.teamId = data.teamId
+
+      // 检查是否已经在已选择列表中
+      const existingIndex = pickedCharacters.value.findIndex(c => c.characterId === data.userId)
+      if (existingIndex >= 0) {
+        console.log(`玩家 ${player.username} 已在已选择列表中，更新队伍ID`)
+        pickedCharacters.value[existingIndex].teamId = data.teamId
+      } else {
+        console.log(`将玩家 ${player.username} 添加到已选择列表`)
+        // 添加到已选择列表
+        pickedCharacters.value.push({
+          characterId: data.userId,
+          characterName: data.username || player.username,
+          characterAvatar: data.avatar || player.avatar,
+          teamId: data.teamId,
+          pickOrder: pickingPhase.value.currentPick
+        })
+      }
+
+      // 添加系统消息
+      addSystemMessage(`${data.teamId === 1 ? '一' : '二'}队选择了玩家 ${data.username || player.username}`)
+
+      // 更新下一个选人的队伍
+      if (data.nextTeamPick !== undefined) {
+        console.log(`更新下一个选人的队伍为 ${data.nextTeamPick}`)
+        pickingPhase.value.currentTeam = data.nextTeamPick
+        pickingPhase.value.currentPick++
+
+        // 强制触发UI更新
+        nextTick(() => {
+          console.log('强制触发UI更新，当前选人队伍:', pickingPhase.value.currentTeam)
+        })
+
+        // 添加系统消息
+        addSystemMessage(`轮到${data.nextTeamPick === 1 ? '一' : '二'}队队长选择玩家`)
+      }
+
+      // 如果选人阶段结束，更新UI
+      if (data.remainingPlayers === 0) {
+        console.log('选人阶段结束，进入选边阶段')
+        // 进入选边阶段
+        if (isCaptain.value && userTeamId.value === 1) {
+          sideSelectorVisible.value = true
+        }
+      }
+    } else {
+      console.warn(`找不到玩家 ${data.userId}，尝试刷新房间数据`)
+      // 如果找不到玩家，尝试刷新房间数据
+      refreshRoomDetail(false)
+    }
+  } else {
+    console.warn('收到的player.selected事件数据无效:', data)
+  }
+
+  // 强制更新选人阶段状态
+  updatePickingPhaseState()
+}
+
+// 处理队伍选择红蓝方事件
+const handleTeamSelectedSide = (data) => {
+  console.log('收到team.selected_side事件:', data)
+
+  // 更新队伍阵营显示
+  if (data.teams && Array.isArray(data.teams)) {
+    // 更新队伍信息
+    data.teams.forEach(team => {
+      const existingTeam = roomData.value.teams.find(t => t.id === team.id)
+      if (existingTeam) {
+        existingTeam.side = team.side
+        existingTeam.name = team.name
+      }
+    })
+
+    // 添加系统消息
+    const team = data.teams.find(t => t.id === data.teamId)
+    if (team) {
+      addSystemMessage(`${team.id === 1 ? '一' : '二'}队选择了${team.side === 'blue' ? '蓝' : '红'}方`)
+    }
+
+    // 显示游戏准备开始的提示
+    ElMessage.success('阵营选择完成，游戏即将开始')
+  }
+}
+
 // 密码输入对话框相关状态
 const passwordDialogVisible = ref(false)
 const passwordInput = ref('')
@@ -968,8 +1333,6 @@ onMounted(async () => {
           console.warn('重新加入房间失败，但用户已在房间中，继续使用当前数据')
           ElMessage.warning('更新房间数据失败，可能会看不到最新消息')
         }
-      } else {
-        console.log('成功发送joinRoom请求，等待WebSocket响应')
       }
     }
 
@@ -1153,50 +1516,37 @@ const startGame = async () => {
   }
 }
 
-// 选择角色
+// 选择角色函数现在直接使用pickPlayer函数
 const pickCharacter = (character) => {
-  if (!room.value || !isCaptain.value) return
-
-  // 检查当前是否轮到该队长选择
-  if (pickingPhase.value.currentTeam !== userTeamId.value) {
-    ElMessage.warning('不是您的选择回合')
-    return
-  }
-
-  // 检查角色是否已经被选择
-  if (pickedCharacters.value.some(c => c.characterId === character.id)) {
-    ElMessage.warning('该角色已被选择')
-    return
-  }
-
-  // 添加到已选择列表
-  pickedCharacters.value.push({
-    characterId: character.id,
-    characterName: character.name,
-    characterAvatar: character.avatar,
-    teamId: userTeamId.value,
-    pickOrder: pickingPhase.value.currentPick
-  })
-
-  // 添加系统消息
-  addSystemMessage(`${userTeamId.value === 1 ? '一' : '二'}队选择了 ${character.name}`)
-
-  // 关闭选择弹窗
-  characterPickingVisible.value = false
-
-  // 更新选择进度
-  updatePickingProgress()
+  // 直接调用pickPlayer函数
+  pickPlayer(character)
 }
 
 // 选择红蓝方
 const pickSide = (side) => {
-  if (!room.value || !isCaptain.value || userTeamId.value !== 1) return
+  if (!roomData.value || !isCaptain.value || userTeamId.value !== 1) return
 
   selectedSide.value = side
   sideSelectorVisible.value = false
 
-  // 进入等待游戏阶段
-  setRoomPhase('waiting-game')
+  // 使用WebSocket API选择红蓝方
+  socketStore.captainSelectSide(
+    roomId.value,
+    userTeamId.value,
+    side,
+    (response) => {
+      if (response.status === 'success') {
+        console.log('选择红蓝方成功:', response)
+        // 服务器会广播 team.selected_side 事件，所有客户端都会收到
+        // 所以这里不需要手动更新UI
+      } else {
+        console.error('选择红蓝方失败:', response.message)
+        ElMessage.error(response.message || '选择红蓝方失败')
+        // 如果失败，重新显示选择弹窗
+        sideSelectorVisible.value = true
+      }
+    }
+  )
 }
 
 // 删除重复的startGame函数
@@ -1544,11 +1894,11 @@ const teamColor = (teamId) => {
 
 // 删除不再需要的canStartPicking计算属性
 
-// 是否显示选择角色按钮
-const showPickCharacterButton = computed(() => {
-  if (!roomData.value || roomData.value.status !== 'picking' || !isCaptain.value) return false
-  return pickingPhase.value.currentTeam === userTeamId.value
-})
+// 已移除选择角色按钮的计算属性
+// const showPickCharacterButton = computed(() => {
+//   if (!roomData.value || roomData.value.status !== 'picking' || !isCaptain.value) return false
+//   return pickingPhase.value.currentTeam === userTeamId.value
+// })
 
 // 是否显示选择红蓝方按钮
 const showPickSideButton = computed(() => {
@@ -1638,7 +1988,34 @@ watch(() => room.value?.status, (newStatus) => {
     // 房间状态变为选人阶段或之后，且用户已经有队伍
     activeVoiceTeam.value = userTeamId.value
   }
+
+  // 如果状态是选人阶段，初始化已选择玩家列表
+  if (newStatus === 'picking') {
+    initializePickedCharacters()
+  }
 })
+
+// 监听玩家列表变化
+watch(() => players.value, (newPlayers, oldPlayers) => {
+  if (!newPlayers || !oldPlayers) return
+
+  // 检查是否有玩家的teamId变化
+  const hasTeamIdChanged = newPlayers.some((newPlayer, index) => {
+    const oldPlayer = oldPlayers[index]
+    return oldPlayer && newPlayer.userId === oldPlayer.userId && newPlayer.teamId !== oldPlayer.teamId
+  })
+
+  // 如果有玩家的teamId变化，重新初始化已选择玩家列表
+  if (hasTeamIdChanged && roomData.value?.status === 'picking') {
+    console.log('检测到玩家teamId变化，重新初始化已选择玩家列表')
+    initializePickedCharacters()
+  } else if (roomData.value?.status === 'picking') {
+    // 即使没有teamId变化，也更新选人阶段状态
+    // 这是为了处理服务器返回的玩家数据中teamId已经更新，但是选人界面没有更新的情况
+    console.log('检测到玩家列表变化，更新选人阶段状态')
+    updatePickingPhaseState()
+  }
+}, { deep: true })
 
 // 监听路由参数变化，当房间ID变化时重新加载
 watch(() => route.params.id, (newId, oldId) => {
@@ -1660,8 +2037,6 @@ const refreshRoomDetail = async (autoJoin = false) => {
   isLoading.value = true
 
   try {
-    console.log(`正在加载房间详情，ID: ${roomId.value}, autoJoin: ${autoJoin}`)
-
     // 确保 WebSocket 已连接
     if (!socketStore.isConnected) {
       console.log('WebSocket未连接，尝试连接...')
@@ -1676,7 +2051,6 @@ const refreshRoomDetail = async (autoJoin = false) => {
       // 使用WebSocket获取房间详情
       const success = socketStore.getRoomDetail(roomId.value, (response) => {
         if (response.status === 'success') {
-          console.log('成功获取房间详情:', response.data)
 
           // 处理房间数据
           const roomData = response.data
@@ -1719,8 +2093,6 @@ const refreshRoomDetail = async (autoJoin = false) => {
       return;
     }
 
-    console.log('房间详情加载成功:', room.value)
-
     // 检查用户是否已经在房间中
     const isAlreadyInRoom = roomStore.isUserInRoom(room.value)
 
@@ -1742,11 +2114,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
           console.warn('重新加入房间失败，但用户已在房间中，继续使用当前数据')
           ElMessage.warning('更新房间数据失败，可能会看不到最新消息')
         }
-      } else {
-        console.log('成功发送joinRoom请求，等待WebSocket响应')
       }
-    } else {
-      console.log('仅刷新房间数据，不自动加入房间')
     }
 
     // 使用isUserInRoom函数的结果来决定是否显示提示
@@ -1863,15 +2231,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 开始游戏
               </el-button>
 
-              <!-- 队长选择角色按钮 -->
-              <el-button
-                v-if="showPickCharacterButton"
-                type="warning"
-                @click="characterPickingVisible = true"
-                class="action-btn"
-              >
-                选择角色
-              </el-button>
+              <!-- 已移除队长选择角色按钮 -->
 
               <!-- 一队队长选择红蓝方按钮 -->
               <el-button
@@ -2195,7 +2555,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                             </div>
                             <div class="pool-players">
                               <div
-                                v-for="player in characters.filter(c => !pickedCharacters.some(p => p.characterId === c.id))"
+                                v-for="player in availablePlayers"
                                 :key="player.id"
                                 class="pool-player"
                                 :class="{'selectable': pickingPhase.currentTeam === userTeamId && isCaptain}"
@@ -2203,6 +2563,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                               >
                                 <img :src="player.avatar" :alt="player.name" class="pool-player-avatar">
                                 <div class="pool-player-name">{{ player.name }}</div>
+                                <div v-if="pickingPhase.currentTeam === userTeamId && isCaptain" class="pick-button">选择</div>
                               </div>
                             </div>
                           </div>
@@ -2542,28 +2903,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
             </div>
           </div>
 
-          <!-- 选择角色弹窗 -->
-          <el-dialog
-            v-model="characterPickingVisible"
-            title="选择角色"
-            width="800px"
-            :close-on-click-modal="false"
-            :close-on-press-escape="false"
-            :show-close="false"
-          >
-            <div class="character-grid">
-              <div
-                v-for="character in characters"
-                :key="character.id"
-                class="character-item"
-                :class="{'disabled': pickedCharacters.some(c => c.characterId === character.id)}"
-                @click="pickedCharacters.some(c => c.characterId === character.id) ? null : pickCharacter(character)"
-              >
-                <img :src="character.avatar" :alt="character.name" class="character-grid-avatar">
-                <div class="character-grid-name">{{ character.name }}</div>
-              </div>
-            </div>
-          </el-dialog>
+          <!-- 已移除选择角色弹窗 -->
 
           <!-- 选择红蓝方弹窗 -->
           <el-dialog
@@ -3949,7 +4289,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
 .spectators-sidebar {
   padding-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  height: 50px00px;
+  height: 450px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

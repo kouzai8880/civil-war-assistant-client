@@ -133,17 +133,6 @@ const handleSizeChange = (size) => {
 
 // 加入房间
 const joinRoom = async (room) => {
-  if (room.status !== 'waiting') {
-    ElMessage.warning('该房间不在等待状态，无法加入')
-    return
-  }
-
-  // 如果房间玩家已满，提示用户可以加入观战席
-  if (room.players && room.players.length >= room.playerCount) {
-    ElMessage.info('该房间玩家已满，您将以观战者身份加入')
-    // 不返回，继续执行加入房间的逻辑
-  }
-
   console.log('准备加入房间:', room.id, room.name)
 
   try {
@@ -389,9 +378,7 @@ const getPageList = () => {
         </div>
         <div class="room-card-footer">
           <span class="room-time">创建于 {{ formatTime(room.createTime) }}</span>
-          <a v-if="room.status === 'waiting'" href="javascript:void(0)" class="btn btn-primary" @click="joinRoom(room)">加入房间</a>
-          <button v-else-if="room.status === 'gaming'" class="btn btn-outline" @click="joinRoom(room)">观战中+</button>
-          <button v-else class="btn btn-outline" disabled>{{ room.status === 'picking' ? '选人进行中' : '已结束' }}</button>
+          <a href="javascript:void(0)" class="btn btn-primary" @click="joinRoom(room)">加入房间</a>
         </div>
       </div>
     </div>

@@ -49,7 +49,6 @@ const initApp = async () => {
   if (electronStore.isElectronEnv) {
     try {
       await electronStore.init()
-      console.log(`已在Electron环境中初始化，应用版本: ${electronStore.appVersion}`)
     } catch (error) {
       console.error('Electron初始化失败:', error)
     }

@@ -27,7 +27,16 @@ export const useRoomStore = defineStore('room', () => {
   const isInRoom = computed(() => Boolean(currentRoom.value))
   const isRoomOwner = computed(() => {
     if (!currentRoom.value || !userStore.userId) return false
-    return currentRoom.value.creatorId === userStore.userId
+
+    // 处理嵌套的房间数据结构
+    const roomData = currentRoom.value.room ? currentRoom.value.room : currentRoom.value
+
+    // 输出调试信息
+    console.log('计算isRoomOwner - 当前用户ID:', userStore.userId)
+    console.log('计算isRoomOwner - 房间创建者ID:', roomData.creatorId)
+    console.log('计算isRoomOwner - 房间数据:', roomData)
+
+    return roomData.creatorId === userStore.userId
   })
 
   // 检查用户是否在房间中（作为玩家或观众）
@@ -73,18 +82,27 @@ export const useRoomStore = defineStore('room', () => {
 
     // 确保关键属性总是有值，防止前端报错
     if (currentRoom.value) {
+      // 处理嵌套的房间数据结构
+      if (currentRoom.value.room) {
+        // 将房间的关键属性复制到顶层，确保一致性
+        currentRoom.value.creatorId = currentRoom.value.room.creatorId
+        currentRoom.value.creatorName = currentRoom.value.room.creatorName
+        currentRoom.value.creatorAvatar = currentRoom.value.room.creatorAvatar
+        currentRoom.value.name = currentRoom.value.room.name
+        currentRoom.value.id = currentRoom.value.room.id
+        currentRoom.value.status = currentRoom.value.room.status
+      }
+
       currentRoom.value.players = currentRoom.value.players || []
       currentRoom.value.teams = currentRoom.value.teams || []
       currentRoom.value.spectators = currentRoom.value.spectators || []
       currentRoom.value.messages = currentRoom.value.messages || []
     }
-
   }
 
   // 监听房间相关事件
   // 监听加入房间成功事件
   window.addEventListener('roomJoined', (event) => {
-    console.log('收到roomJoined事件:', event.detail)
     if (event.detail && event.detail.status === 'success') {
       const roomData = event.detail.data.room
       setCurrentRoom(roomData)
@@ -459,7 +477,6 @@ export const useRoomStore = defineStore('room', () => {
         // 使用WebSocket获取房间详情
         const success = socketStore.getRoomDetail(roomId, (response) => {
           if (response.status === 'success') {
-            console.log('成功获取房间详情:', response.data)
 
             // 处理房间数据
             const roomData = response.data
@@ -513,7 +530,6 @@ export const useRoomStore = defineStore('room', () => {
     error.value = null
 
     try {
-      console.log(`用户 ${userStore.username} (${userStore.userId}) 尝试加入房间 ${roomId}`)
 
       // 确保 WebSocket 已连接
       const socketStore = useSocketStore()
@@ -524,10 +540,6 @@ export const useRoomStore = defineStore('room', () => {
           throw new Error('WebSocket连接失败，无法加入房间')
         }
       }
-
-      // 直接使用密码参数
-      console.log('使用WebSocket加入房间:', roomId, password ? '带密码' : '无密码')
-
       // 使用WebSocket加入房间
       const success = socketStore.joinRoom(roomId, password)
       if (!success) {
@@ -649,10 +661,18 @@ export const useRoomStore = defineStore('room', () => {
 
   // 开始游戏
   const startGame = async () => {
-    //打印当前房主
-    console.log('当前房主:', currentRoom.value?.creator)
+    // 处理嵌套的房间数据结构
+    const roomData = currentRoom.value?.room ? currentRoom.value.room : currentRoom.value
+
+    // 打印房间和用户信息
+    console.log('当前房间数据:', currentRoom.value)
+    console.log('嵌套结构处理后的房间数据:', roomData)
+    console.log('当前房主ID:', roomData?.creatorId)
+    console.log('当前用户ID:', userStore.userId)
+    console.log('isRoomOwner计算属性值:', isRoomOwner.value)
+
     if (!currentRoom.value || !isRoomOwner.value) {
-      error.value = !isRoomOwner.value ? '只有房主才能开始游戏' : '没有加入房间'
+      error.value = !isRoomOwner.value ? `只有房主才能开始游戏（当前用户ID: ${userStore.userId}, 房主ID: ${roomData?.creatorId}）` : '没有加入房间'
       return false
     }
 

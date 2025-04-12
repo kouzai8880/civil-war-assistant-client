@@ -234,7 +234,6 @@ export const useChatStore = defineStore('chat', () => {
     
     // 监听房间加入事件
     on('roomJoined', (data) => {
-      console.log('[WebSocket] 加入房间成功:', data)
       currentRoomId.value = data.roomId
     })
     

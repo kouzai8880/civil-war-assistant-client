@@ -56,67 +56,56 @@ const isReady = computed(() => {
 
 // 用户是否是房主
 const isCreator = computed(() => {
-  if (!room.value || !currentUserId.value) return false
+  if (!roomData.value || !currentUserId.value) return false
 
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  // 输出调试信息
+  console.log('计算isCreator - 当前用户ID:', currentUserId.value)
+  console.log('计算isCreator - 房间创建者ID:', roomData.value.creatorId)
 
-  return roomData.creatorId === currentUserId.value
+  return roomData.value.creatorId === currentUserId.value
 })
 
 // 用户是否是队长
 const isCaptain = computed(() => {
-  if (!room.value || !currentUserId.value) return false
-
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  if (!roomData.value || !currentUserId.value) return false
 
   // 如果没有玩家列表，返回false
-  if (!roomData.players || !Array.isArray(roomData.players)) return false
+  if (!players.value || !Array.isArray(players.value)) return false
 
-  const currentPlayer = roomData.players.find(p => p.userId === currentUserId.value)
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
   return currentPlayer && currentPlayer.isCaptain
 })
 
 // 用户所在队伍ID
 const userTeamId = computed(() => {
-  if (!room.value || !currentUserId.value) return null
-
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  if (!roomData.value || !currentUserId.value) return null
 
   // 如果没有玩家列表，返回null
-  if (!roomData.players || !Array.isArray(roomData.players)) return null
+  if (!players.value || !Array.isArray(players.value)) return null
 
-  const currentPlayer = roomData.players.find(p => p.userId === currentUserId.value)
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
   return currentPlayer ? currentPlayer.teamId : null
 })
 
 // 用户是否在观众席
 const isSpectator = computed(() => {
-  if (!room.value || !currentUserId.value) return true
-
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  if (!roomData.value || !currentUserId.value) return true
 
   // 如果没有玩家列表，默认为观众
-  if (!roomData.players || !Array.isArray(roomData.players)) return true
+  if (!players.value || !Array.isArray(players.value)) return true
 
   // 检查用户是否在玩家列表中
-  return !roomData.players.some(p => p.userId === currentUserId.value)
+  return !players.value.some(p => p.userId === currentUserId.value)
 })
 
 // 队伍是否已满
 const isTeamFull = computed(() => {
-  if (!room.value) return true
-
-  // 处理嵌套的房间数据结构
-  const roomData = room.value.room ? room.value.room : room.value
+  if (!roomData.value) return true
 
   // 如果没有玩家列表，返回true
-  if (!roomData.players || !Array.isArray(roomData.players)) return true
+  if (!players.value || !Array.isArray(players.value)) return true
 
-  return roomData.players.length >= roomData.playerCount
+  return players.value.length >= roomData.value.playerCount
 })
 
 // 当前选人阶段
@@ -450,7 +439,6 @@ const loadRoomDetail = async () => {
 
     // 初始化聊天消息
     if (roomData.messages && roomData.messages.length > 0) {
-      console.log(`从房间详情中加载 ${roomData.messages.length} 条历史聊天记录`);
       loadChatHistory(roomData.messages);
     }
 
@@ -562,8 +550,6 @@ const loadChatHistory = (chatHistory) => {
     return;
   }
 
-  console.log(`加载 ${chatHistory.length} 条历史聊天记录`);
-
   try {
     // 确保所有聊天频道都已初始化
     if (!messages.value) {
@@ -581,8 +567,6 @@ const loadChatHistory = (chatHistory) => {
 
     // 处理每条历史消息
     chatHistory.forEach((message, index) => {
-      console.log(`处理第 ${index + 1} 条消息:`, message.id);
-
       // 判断消息类型和频道
       let channel = 'public';
       if (message.channel === 'team' && message.teamId) {
@@ -602,8 +586,6 @@ const loadChatHistory = (chatHistory) => {
         channel: channel
       };
 
-      console.log(`消息将被添加到频道: ${channel}`);
-
       // 如果是队伍消息，需要检查权限
       if (channel.startsWith('team')) {
         const teamId = parseInt(channel.replace('team', ''));
@@ -619,14 +601,9 @@ const loadChatHistory = (chatHistory) => {
         // 公共消息直接添加
         if (!messages.value[channel]) messages.value[channel] = [];
         messages.value[channel].push(formattedMessage);
-        console.log(`公共消息已添加到 ${channel}`);
       }
     });
 
-    // 检查消息是否成功加载
-    Object.keys(messages.value).forEach(channel => {
-      console.log(`频道 ${channel} 有 ${messages.value[channel].length} 条消息`);
-    });
 
     console.log('历史聊天记录加载完成:', messages.value);
 
@@ -648,7 +625,6 @@ const loadChatHistory = (chatHistory) => {
 
 // 各种事件处理函数
 const handleRoomJoined = (event) => {
-  console.log('★★★ handleRoomJoined 函数被调用 ★★★');
   console.log('收到roomJoined事件:', event.detail);
 
   try {
@@ -661,22 +637,12 @@ const handleRoomJoined = (event) => {
 
       // 加载历史聊天记录
       if (event.detail.data?.messages) {
-        console.log(`开始加载 ${event.detail.data.messages.length} 条历史聊天记录`);
-        // 打印第一条消息以便于调试
-        if (event.detail.data.messages.length > 0) {
-          console.log('第一条消息示例:', event.detail.data.messages[0]);
-        }
 
         // 加载历史消息
         loadChatHistory(event.detail.data.messages);
 
         // 检查消息是否已加载
         setTimeout(() => {
-          console.log('当前消息状态:');
-          Object.keys(messages.value).forEach(channel => {
-            console.log(`频道 ${channel} 有 ${messages.value[channel].length} 条消息`);
-          });
-
           // 如果消息没有加载，尝试再次加载
           if (messages.value.public.length === 0 && event.detail.data.messages.length > 0) {
             console.log('消息加载失败，尝试再次加载...');
@@ -703,7 +669,6 @@ const handleRoomJoined = (event) => {
     console.error('处理roomJoined事件时出错:', error);
   }
 
-  console.log('★★★ handleRoomJoined 函数执行完毕 ★★★');
 }
 
 const handleRoleChanged = (event) => {
@@ -976,7 +941,6 @@ onMounted(async () => {
     } else {
 
       // 检查用户是否已经在房间中
-      console.log('检查用户是否已在房间中:', room.value)
       // 如果房间数据结构是嵌套的，需要使用room.value.room
       const roomData = room.value && room.value.room ? room.value.room : room.value
       const isAlreadyInRoom = roomStore.isUserInRoom(roomData)
@@ -1139,22 +1103,28 @@ const joinRoom = async () => {
 
 // 开始游戏
 const startGame = async () => {
-  if (!room.value) {
+  if (!roomData.value) {
     console.error('无法开始游戏：房间数据不存在')
     ElMessage.error('房间数据不存在')
     return
   }
 
+  // 详细输出当前用户和房主信息
+  console.log('当前用户ID:', userStore.userId)
+  console.log('房间创建者ID:', roomData.value?.creatorId)
+  console.log('isCreator计算属性值:', isCreator.value)
+  console.log('房间数据:', roomData.value)
+
   if (!isCreator.value) {
     console.error('无法开始游戏：不是房主')
-    ElMessage.warning('只有房主可以开始游戏')
+    ElMessage.warning(`只有房主可以开始游戏（当前用户ID: ${userStore.userId}, 房主ID: ${roomData.value?.creatorId}）`)
     return
   }
 
   // 检查是否有足够的玩家
-  if (!room.value.players || room.value.players.length < 2) {
+  if (!players.value || players.value.length !== 10) {
     console.error('无法开始游戏：玩家数量不足')
-    ElMessage.warning('至少需要 2 名玩家才能开始游戏')
+    ElMessage.warning('需要 10 名玩家才能开始游戏')
     return
   }
 
@@ -1533,6 +1503,35 @@ const statusClass = (status) => {
   }
 }
 
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return '未知时间'
+
+  try {
+    // 尝试创建日期对象
+    const date = new Date(dateTimeStr)
+
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.warn('无效的日期格式:', dateTimeStr)
+      return '未知时间'
+    }
+
+    // 格式化日期
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    console.error('日期格式化错误:', error)
+    return '未知时间'
+  }
+}
+
 // 队伍颜色
 const teamColor = (teamId) => {
   if (!teamId) return ''
@@ -1547,33 +1546,34 @@ const teamColor = (teamId) => {
 
 // 是否显示选择角色按钮
 const showPickCharacterButton = computed(() => {
-  if (!room.value || room.value.status !== 'picking' || !isCaptain.value) return false
+  if (!roomData.value || roomData.value.status !== 'picking' || !isCaptain.value) return false
   return pickingPhase.value.currentTeam === userTeamId.value
 })
 
 // 是否显示选择红蓝方按钮
 const showPickSideButton = computed(() => {
-  if (!room.value || room.value.status !== 'side-picking' || !isCaptain.value) return false
+  if (!roomData.value || roomData.value.status !== 'side-picking' || !isCaptain.value) return false
   return userTeamId.value === 1
 })
 
 // 是否显示开始游戏按钮
 const showStartGameButton = computed(() => {
-  if (!room.value || !isCreator.value) return false
-  return room.value.status === 'waiting-game'
+  if (!roomData.value || !isCreator.value) return false
+  // 在waiting-game状态下始终显示按钮，但可能会禁用
+  return roomData.value.status === 'waiting-game'
 })
 
 // 指示队长是否需要行动的提示文本
 const captainActionText = computed(() => {
-  if (!room.value) return ''
+  if (!roomData.value) return ''
 
-  if (room.value.status === 'picking') {
+  if (roomData.value.status === 'picking') {
     if (isCaptain.value && pickingPhase.value.currentTeam === userTeamId.value) {
       return '轮到您选择角色'
     } else if (isCaptain.value) {
       return '等待对方队长选择'
     }
-  } else if (room.value.status === 'side-picking') {
+  } else if (roomData.value.status === 'side-picking') {
     if (isCaptain.value && userTeamId.value === 1) {
       return '请选择红方或蓝方'
     }
@@ -1783,13 +1783,13 @@ const refreshRoomDetail = async (autoJoin = false) => {
   <div class="room-detail-container">
     <el-skeleton :loading="isLoading" animated :count="1" :throttle="500">
       <template #default>
-        <template v-if="room">
+        <template v-if="roomData">
           <!-- 房间头部信息 -->
           <div class="room-header">
             <div class="room-title">
-              <h1>{{ room.name }}</h1>
-              <div :class="['room-status', statusClass(room.status)]">
-                {{ statusText(room.status) }}
+              <h1>{{ roomData.name }}</h1>
+              <div :class="['room-status', statusClass(roomData.status)]">
+                {{ statusText(roomData.status) }}
               </div>
             </div>
 
@@ -1798,7 +1798,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <div class="info-label">玩家数量:</div>
                 <div class="info-content">
                   <el-icon><User /></el-icon>
-                  <span>{{ room.players.length }}/{{ room.playerCount }}</span>
+                  <span>{{ players.length }}/{{ roomData.playerCount || 10 }}</span>
                 </div>
               </div>
 
@@ -1806,27 +1806,27 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <div class="info-label">游戏模式:</div>
                 <div class="info-content">
                   <el-icon><Monitor /></el-icon>
-                  <span>{{ room.gameType || 'LOL' }}</span>
+                  <span>{{ roomData.gameType || 'LOL' }}</span>
                 </div>
               </div>
 
               <div class="room-info-item">
                 <div class="info-label">BP模式:</div>
-                <div class="info-content">{{ room.pickMode || '队长BP(12211)' }}</div>
+                <div class="info-content">{{ roomData.pickMode || '队长BP(12211)' }}</div>
               </div>
 
               <div class="room-info-item">
                 <div class="info-label">创建时间:</div>
                 <div class="info-content">
                   <el-icon><Clock /></el-icon>
-                  <span>{{ new Date(room.createTime).toLocaleString() }}</span>
+                  <span>{{ formatDateTime(roomData.createTime) }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="room-description" v-if="room.description">
+            <div class="room-description" v-if="roomData.description">
               <h3>房间描述</h3>
-              <p>{{ room.description }}</p>
+              <p>{{ roomData.description }}</p>
             </div>
 
             <!-- 测试导航按钮 -->
@@ -1853,9 +1853,9 @@ const refreshRoomDetail = async (autoJoin = false) => {
 
             <!-- 房间操作按钮 -->
             <div class="room-actions">
-              <!-- 房主可以开始游戏 -->
+              <!-- 房主可以开始游戏，当玩家数量等于10时 -->
               <el-button
-                v-if="isCreator && room.status === 'waiting' && room.players && room.players.length >= 2"
+                v-if="isCreator && roomData.status === 'waiting' && players.length === 10"
                 type="primary"
                 @click="startGame"
                 class="action-btn"
@@ -2321,7 +2321,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                   </template>
 
                   <!-- 等待游戏开始界面 -->
-                  <template v-else-if="room.status === 'waiting-game'">
+                  <template v-else-if="roomData.status === 'waiting-game'">
                     <div class="room-body waiting-game-phase">
                       <div class="section-card waiting-game-container">
                         <div class="card-header">
@@ -2331,16 +2331,22 @@ const refreshRoomDetail = async (autoJoin = false) => {
                         <div class="waiting-game-content">
                           <div class="waiting-game-message">
                             <p>
-                              一队已选择 {{ room.teams[0]?.side === 'red' ? '红方' : '蓝方' }}，
-                              二队将使用 {{ room.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
+                              一队已选择 {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '红方' : '蓝方' }}，
+                              二队将使用 {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
                             </p>
                             <p>所有玩家请在游戏客户端中建立自定义房间，按照分配加入对应队伍</p>
 
                             <div v-if="isCreator" class="start-game-section">
                               <p>请在确认所有玩家已准备就绪后开始游戏</p>
-                              <el-button type="success" @click="startGame" class="start-game-btn">
+                              <el-button
+                                type="success"
+                                @click="startGame"
+                                class="start-game-btn"
+                                :disabled="players.length !== 10"
+                              >
                                 开始游戏
                               </el-button>
+                              <p v-if="players.length !== 10" class="warning-text">需要 10 名玩家才能开始游戏，当前 {{ players.length }} 名玩家</p>
                             </div>
 
                             <div v-else class="waiting-for-game-start">
@@ -2351,11 +2357,11 @@ const refreshRoomDetail = async (autoJoin = false) => {
                           <!-- 双方阵容展示 -->
                           <div class="teams-composition">
                             <!-- 一队已选择的角色 -->
-                            <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-red' : 'side-blue'">
+                            <div class="team-composition" :class="roomData.teams && roomData.teams[0]?.side === 'red' ? 'side-red' : 'side-blue'">
                               <h3>
                                 一队阵容
                                 <span class="side-label">
-                                  {{ room.teams[0]?.side === 'red' ? '红方' : '蓝方' }}
+                                  {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '红方' : '蓝方' }}
                                 </span>
                               </h3>
                               <div class="team-characters">
@@ -2371,11 +2377,11 @@ const refreshRoomDetail = async (autoJoin = false) => {
                             </div>
 
                             <!-- 二队已选择的角色 -->
-                            <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
+                            <div class="team-composition" :class="roomData.teams && roomData.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
                               <h3>
                                 二队阵容
                                 <span class="side-label">
-                                  {{ room.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
+                                  {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
                                 </span>
                               </h3>
                               <div class="team-characters">
@@ -2396,7 +2402,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                   </template>
 
                   <!-- 游戏中界面 -->
-                  <template v-else-if="room.status === 'gaming'">
+                  <template v-else-if="roomData.status === 'gaming'">
                     <div class="room-body gaming-phase">
                       <div class="section-card gaming-container">
                         <div class="card-header">
@@ -2415,11 +2421,11 @@ const refreshRoomDetail = async (autoJoin = false) => {
                           <!-- 双方阵容展示 -->
                           <div class="teams-composition">
                             <!-- 一队已选择的角色 -->
-                            <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-red' : 'side-blue'">
+                            <div class="team-composition" :class="roomData.teams && roomData.teams[0]?.side === 'red' ? 'side-red' : 'side-blue'">
                               <h3>
                                 一队阵容
                                 <span class="side-label">
-                                  {{ room.teams[0]?.side === 'red' ? '红方' : '蓝方' }}
+                                  {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '红方' : '蓝方' }}
                                 </span>
                               </h3>
                               <div class="team-characters">
@@ -2435,11 +2441,11 @@ const refreshRoomDetail = async (autoJoin = false) => {
                             </div>
 
                             <!-- 二队已选择的角色 -->
-                            <div class="team-composition" :class="room.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
+                            <div class="team-composition" :class="roomData.teams && roomData.teams[0]?.side === 'red' ? 'side-blue' : 'side-red'">
                               <h3>
                                 二队阵容
                                 <span class="side-label">
-                                  {{ room.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
+                                  {{ roomData.teams && roomData.teams[0]?.side === 'red' ? '蓝方' : '红方' }}
                                 </span>
                               </h3>
                               <div class="team-characters">
@@ -2504,7 +2510,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                           <div class="message-content">
                             <div class="message-author">
                               {{ msg.username }}
-                              <span class="message-time">{{ new Date(msg.time).toLocaleTimeString() }}</span>
+                              <span class="message-time">{{ msg.time ? new Date(msg.time).toLocaleTimeString() : '未知时间' }}</span>
                             </div>
                             <p>{{ msg.content }}</p>
                           </div>
@@ -3943,7 +3949,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
 .spectators-sidebar {
   padding-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  height: 600px;
+  height: 50px00px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4484,5 +4490,12 @@ const refreshRoomDetail = async (autoJoin = false) => {
 
 .player-card {
   position: relative;
+}
+
+/* 警告文本样式 */
+.warning-text {
+  color: #e6a23c;
+  margin-top: 10px;
+  font-size: 14px;
 }
 </style>

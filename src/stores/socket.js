@@ -161,7 +161,18 @@ export const useSocketStore = defineStore('socket', () => {
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
       if (socket) {
-        socket.emit('joinRoom', joinData)
+        // 添加回调函数，处理房间已满的情况
+        socket.emit('joinRoom', joinData, (response) => {
+          console.log('joinRoom响应:', response)
+
+          // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
+          if (response.status === 'error' &&
+              (response.message.includes('已满') || response.message.includes('full'))) {
+            console.log('房间已满，自动尝试加入观战席')
+            joinAsSpectator(roomId)
+          }
+        })
+
         // 不立即设置currentRoomId，等待roomJoined事件
         return true
       } else {

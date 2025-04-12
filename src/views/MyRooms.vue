@@ -33,6 +33,34 @@ const getChampionIcon = (index = 0) => {
   return `https://ddragon.leagueoflegends.com/cdn/13.12.1/img/champion/${champion}.png`
 }
 
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return '未知时间'
+
+  try {
+    // 尝试创建日期对象
+    const date = new Date(dateTimeStr)
+
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.warn('无效的日期格式:', dateTimeStr)
+      return '未知时间'
+    }
+
+    // 格式化日期
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('日期格式化错误:', error)
+    return '未知时间'
+  }
+}
+
 // 加载房间数据
 onMounted(async () => {
   // 检查是否登录

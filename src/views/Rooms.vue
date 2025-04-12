@@ -138,9 +138,10 @@ const joinRoom = async (room) => {
     return
   }
 
+  // 如果房间玩家已满，提示用户可以加入观战席
   if (room.players && room.players.length >= room.playerCount) {
-    ElMessage.warning('该房间已满，无法加入')
-    return
+    ElMessage.info('该房间玩家已满，您将以观战者身份加入')
+    // 不返回，继续执行加入房间的逻辑
   }
 
   console.log('准备加入房间:', room.id, room.name)

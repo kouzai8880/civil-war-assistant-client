@@ -34,8 +34,6 @@ export const useRoomStore = defineStore('room', () => {
   const isUserInRoom = (room) => {
     if (!room || !userStore.userId) return false
 
-    console.log('检查用户是否在房间中:', room)
-
     // 处理嵌套的房间数据结构
     const roomData = room.room ? room.room : room
 
@@ -64,8 +62,6 @@ export const useRoomStore = defineStore('room', () => {
       return
     }
 
-    console.log('设置当前房间数据:', roomData)
-
     // 如果是响应对象，提取实际的房间数据
     if (roomData.status === 'success' && roomData.data) {
       currentRoom.value = roomData.data
@@ -83,7 +79,6 @@ export const useRoomStore = defineStore('room', () => {
       currentRoom.value.messages = currentRoom.value.messages || []
     }
 
-    console.log('当前房间数据已更新:', currentRoom.value)
   }
 
   // 监听房间相关事件
@@ -542,6 +537,10 @@ export const useRoomStore = defineStore('room', () => {
       // 等待一下，给WebSocket事件处理时间
       await new Promise(resolve => setTimeout(resolve, 500))
 
+      // 如果加入房间失败，并且是因为房间已满，则尝试加入观战席
+      // 注意：这里不需要额外的代码，因为我们已经在socketStore.joinRoom中处理了这种情况
+      // 如果房间已满，它会自动尝试加入观战席
+
       // 不再重新获取房间详情，减少API调用
       // 房间详情页会自动加载最新数据
 
@@ -650,6 +649,8 @@ export const useRoomStore = defineStore('room', () => {
 
   // 开始游戏
   const startGame = async () => {
+    //打印当前房主
+    console.log('当前房主:', currentRoom.value?.creator)
     if (!currentRoom.value || !isRoomOwner.value) {
       error.value = !isRoomOwner.value ? '只有房主才能开始游戏' : '没有加入房间'
       return false

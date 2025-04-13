@@ -97,7 +97,6 @@ onMounted(async () => {
   // 初始化Electron功能
   if (isElectronEnv.value) {
     await electronStore.init()
-    console.log(`已在Electron环境中初始化，应用版本: ${electronStore.appVersion}`)
   }
 })
 </script>

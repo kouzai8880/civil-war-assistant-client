@@ -72,11 +72,11 @@ const handleRegister = async () => {
   try {
     // 表单验证
     await registerFormRef.value.validate()
-    
+
     // 防止重复提交
     if (loading.value) return
     loading.value = true
-    
+
     // 注册处理
     const registerData = {
       username: registerForm.username,
@@ -85,9 +85,9 @@ const handleRegister = async () => {
       confirmPassword: registerForm.confirmPassword,
       gameId: registerForm.gameId
     }
-    
+
     const success = await userStore.register(registerData)
-    
+
     if (success) {
       ElMessage.success('注册成功，正在跳转到登录页')
       router.push('/login')
@@ -115,7 +115,7 @@ const goToLogin = () => {
         <h2 class="register-title">用户注册</h2>
         <p class="register-subtitle">创建您的游戏内战助手账号</p>
       </div>
-      
+
       <el-form
         ref="registerFormRef"
         :model="registerForm"
@@ -130,7 +130,7 @@ const goToLogin = () => {
             prefix-icon="User"
           />
         </el-form-item>
-        
+
         <el-form-item prop="email">
           <el-input
             v-model="registerForm.email"
@@ -138,7 +138,7 @@ const goToLogin = () => {
             prefix-icon="Email"
           />
         </el-form-item>
-        
+
         <el-form-item prop="password">
           <el-input
             v-model="registerForm.password"
@@ -148,7 +148,7 @@ const goToLogin = () => {
             show-password
           />
         </el-form-item>
-        
+
         <el-form-item prop="confirmPassword">
           <el-input
             v-model="registerForm.confirmPassword"
@@ -158,7 +158,7 @@ const goToLogin = () => {
             show-password
           />
         </el-form-item>
-        
+
         <el-form-item prop="gameId">
           <el-input
             v-model="registerForm.gameId"
@@ -169,7 +169,7 @@ const goToLogin = () => {
             <span class="form-tip">游戏ID为可选项，稍后也可以在个人设置中绑定</span>
           </template>
         </el-form-item>
-        
+
         <el-form-item prop="agreement">
           <el-checkbox v-model="registerForm.agreement">
             我已阅读并同意
@@ -178,11 +178,11 @@ const goToLogin = () => {
             <el-link type="primary" :underline="false">隐私政策</el-link>
           </el-checkbox>
         </el-form-item>
-        
+
         <el-form-item>
-          <el-button 
-            type="primary" 
-            class="register-button" 
+          <el-button
+            type="primary"
+            class="register-button"
             :loading="loading"
             @click="handleRegister"
           >
@@ -190,7 +190,7 @@ const goToLogin = () => {
           </el-button>
         </el-form-item>
       </el-form>
-      
+
       <div class="register-footer">
         <p>已有账号？ <el-button link type="primary" @click="goToLogin">立即登录</el-button></p>
       </div>
@@ -198,82 +198,7 @@ const goToLogin = () => {
   </div>
 </template>
 
-<style scoped>
-.register-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - 60px);
-  background: var(--bg-dark);
-  position: relative;
-}
-
-.register-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(123,104,238,0.1) 0%, rgba(10,11,14,0) 70%);
-  z-index: 0;
-}
-
-.register-card {
-  width: 400px;
-  background-color: var(--bg-card);
-  border-radius: 12px;
-  padding: var(--spacing-xl);
-  position: relative;
-  z-index: 1;
-}
-
-.register-header {
-  text-align: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.register-title {
-  font-family: var(--font-display);
-  font-size: 28px;
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.register-subtitle {
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.register-form {
-  margin-bottom: var(--spacing-md);
-}
-
-.register-button {
-  width: 100%;
-  height: 44px;
-  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
-  border: none;
-  font-size: 16px;
-}
-
-.register-footer {
-  text-align: center;
-  color: var(--text-secondary);
-  margin-top: var(--spacing-lg);
-}
-
-.form-tip {
-  font-size: 12px;
-  color: var(--text-secondary);
-  display: block;
-  margin-top: 4px;
-}
-
-/* 响应式调整 */
-@media (max-width: 480px) {
-  .register-card {
-    width: 90%;
-    padding: var(--spacing-lg);
-  }
-}
-</style> 
+<style>
+@import '../assets/css/register.css';
+/* 所有样式已移动到 register.css */
+</style>

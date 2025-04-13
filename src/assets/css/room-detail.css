@@ -1,0 +1,1864 @@
+/* RoomDetail.vue 样式 */
+/* 主容器样式 */
+.room-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: #fff;
+  min-height: calc(100vh - 64px);
+  background-color: #121320;
+}
+
+/* 房间头部 */
+.room-header {
+  background-color: #1e1f2d;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.room-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.room-title h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+.room-status {
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-waiting {
+  background-color: #fda92c;
+  color: #fff;
+}
+
+.status-picking {
+  background-color: #5f79fc;
+  color: #fff;
+}
+
+.status-waiting-game {
+  background-color: #a67edd;
+  color: #fff;
+}
+
+.status-gaming {
+  background-color: #00cfa1;
+  color: #fff;
+}
+
+.status-ended {
+  background-color: #f56c6c;
+  color: #fff;
+}
+
+.room-info-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+}
+
+.room-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-label {
+  color: #8b8fa3;
+  font-size: 0.9rem;
+}
+
+.info-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+}
+
+.room-description {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-description h3 {
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.room-description p {
+  color: #8b8fa3;
+  line-height: 1.6;
+}
+
+/* 测试导航按钮 */
+.test-buttons {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.test-buttons h4 {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: #ff9800;
+}
+
+.test-button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* 队长提示 */
+.captain-prompt {
+  margin-bottom: 1.5rem;
+}
+
+.room-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  font-weight: 500;
+}
+
+/* 主要内容区域 */
+.main-content {
+  display: flex;
+  gap: 1.5rem;
+  height: calc(100vh - 350px);
+  min-height: 500px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.sidebar {
+  background-color: #1e1f2d;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-collapsed .sidebar {
+  width: 40px;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.content-area {
+  flex: 1;
+  overflow: hidden;
+  background-color: #1e1f2d;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 聊天区域 */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 60%;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-collapsed .chat-container,
+.sidebar-collapsed .voice-container {
+  display: none;
+}
+
+.chat-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-tab {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  color: #8b8fa3;
+  transition: all 0.3s;
+}
+
+.chat-tab.active {
+  color: #fff;
+  border-bottom: 2px solid #5f79fc;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+
+.message-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  object-fit: cover;
+}
+
+.message-content {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.message-author {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: #8b8fa3;
+  margin-left: 0.5rem;
+}
+
+.system-message {
+  justify-content: center;
+  color: #8b8fa3;
+  font-style: italic;
+}
+
+.system-message .message-content {
+  background-color: rgba(95, 121, 252, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  flex: initial;
+  color: #5f79fc;
+}
+
+.chat-input {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(30, 31, 45, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
+  margin: 0;
+  gap: 10px;
+}
+
+.chat-input input {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 10px 15px;
+  color: #fff;
+  margin: 0;
+}
+
+.chat-input input:focus {
+  border-color: #ff9800;
+  outline: none;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-emoji,
+.btn-send {
+  min-width: 40px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-send {
+  background-color: #ff9800;
+  padding: 0 12px;
+}
+
+.btn-send:hover {
+  background-color: #f57c00;
+}
+
+/* 语音区域样式 */
+.voice-container {
+  flex: 0 0 auto;
+  height: calc(100% - 600px - 1px); /* 减去观众栏高度和边框 */
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.voice-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-mic, .btn-speaker {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #8b8fa3;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-mic.active, .btn-speaker.active {
+  background-color: #5f79fc;
+  color: white;
+}
+
+.voice-participants {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0.5rem 0;
+  max-height: calc(100% - 100px); /* 留出空间给标题和按钮 */
+}
+
+.voice-participant {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.voice-participant.speaking {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.voice-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  object-fit: cover;
+}
+
+.participant-name {
+  flex: 1;
+}
+
+.voice-indicator {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.speaking .voice-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #00cfa1;
+  opacity: 0.8;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+}
+
+.join-voice-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background-color: #5f79fc;
+}
+
+.btn-danger {
+  background-color: #f56c6c;
+}
+
+.join-voice-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* 玩家列表部分 */
+.room-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  min-height: 100%;
+}
+
+.picking-phase,
+.side-picking-phase,
+.waiting-game-phase,
+.gaming-phase {
+  padding: 0;
+}
+
+.section-card {
+  background-color: #1e1f2d;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.players-container {
+  flex: 1;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.single-team {
+  background-color: #1c1d29;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 玩家网格布局 */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.player-card {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.player-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.player-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  object-fit: cover;
+}
+
+.player-info {
+  flex: 1;
+}
+
+.player-name {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.player-badge.creator {
+  background-color: #f56c6c;
+}
+
+.player-badge.captain {
+  background-color: #5f79fc;
+}
+
+.player-status {
+  font-size: 0.8rem;
+}
+
+.player-status.online {
+  color: #00cfa1;
+}
+
+.player-status.afk {
+  color: #fda92c;
+}
+
+.empty-slot {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #8b8fa3;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.empty-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* 观众区域 */
+.spectators-container {
+  margin-top: 1rem;
+}
+
+.spectators-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1.5rem;
+}
+
+.spectator {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: all 0.3s;
+}
+
+.spectator:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.spectator-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  object-fit: cover;
+}
+
+.spectator-name {
+  color: #fff;
+}
+
+.empty-spectators {
+  padding: 1.5rem;
+  text-align: center;
+  color: #8b8fa3;
+}
+
+/* 选人阶段样式 */
+.picking-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.picking-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pick-status {
+  color: #ff9800;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+.pick-content-container {
+  display: flex;
+  gap: 20px;
+}
+
+.teams-container {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.common-players-pool {
+  flex: 2;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pool-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pool-header h3 {
+  color: #fff;
+  font-size: 1.1rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pool-header h3::before {
+  content: '👥';
+  font-size: 1.2rem;
+}
+
+.pool-players {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  height: 100%;
+  align-content: flex-start;
+}
+
+.pool-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+}
+
+.pool-player.selectable {
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.pool-player.selectable:hover {
+  background-color: rgba(255, 152, 0, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pool-player-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #424242;
+  transition: all 0.2s;
+}
+
+.pool-player.selectable:hover .pool-player-avatar {
+  border-color: #ff9800;
+}
+
+.pool-player-name {
+  margin-top: 5px;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.team-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.team-red-section, .team-blue-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 15px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.team-red-section {
+  border-left: 4px solid #ff9800; /* 橙色代替红色 */
+}
+
+.team-blue-section {
+  border-left: 4px solid #00b0ff; /* 浅蓝色代替深蓝色 */
+}
+
+.team-red-section:hover, .team-blue-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.team-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.team-name {
+  color: #fff;
+  font-size: 1.1rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-name::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.team-red-section .team-name::before {
+  background-color: #ff9800;
+}
+
+.team-blue-section .team-name::before {
+  background-color: #00b0ff;
+}
+
+.current-pick-status {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background-color: #ff9800;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* 更新当前选择的队伍样式 */
+.team-red-section.active-team {
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+.team-blue-section.active-team {
+  background-color: rgba(0, 176, 255, 0.1);
+}
+
+.team-players-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.team-captain, .picked-player, .empty-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px;
+  position: relative;
+}
+
+.captain-badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  background-color: #ff9800;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 1;
+}
+
+.captain-avatar, .picked-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #424242;
+}
+
+.captain-name, .picked-name {
+  margin-top: 5px;
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pick-order {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.empty-player {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 2px dashed #424242;
+}
+
+.pick-message {
+  text-align: center;
+  padding: 15px;
+  color: #ff9800;
+  background-color: rgba(255, 152, 0, 0.1);
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.chat-container-main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.chat-wrapper .card-header {
+  padding: 12px 15px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-wrapper .section-title {
+  display: flex;
+  align-items: center;
+}
+
+.chat-wrapper .section-title::before {
+  content: '💬';
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+.chat-wrapper .chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  margin: 10px;
+  min-height: 180px;
+  max-height: calc(100% - 130px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-wrapper .chat-input {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 12px !important;
+  background-color: rgba(30, 31, 45, 0.95) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+  margin: 0 !important;
+  gap: 10px !important;
+  height: 70px !important;
+}
+
+.chat-wrapper .chat-input input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 10px 15px;
+  color: #fff;
+  margin: 0;
+}
+
+.chat-wrapper .chat-input input:focus {
+  border-color: #ff9800;
+  outline: none;
+}
+
+.chat-wrapper .chat-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.chat-wrapper .btn-emoji,
+.chat-wrapper .btn-send {
+  min-width: 40px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-wrapper .btn-send {
+  background-color: #ff9800;
+  padding: 0 12px;
+}
+
+.chat-wrapper .btn-send:hover {
+  background-color: #f57c00;
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+  .main-content {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: 300px;
+  }
+
+  .sidebar-collapsed .sidebar {
+    height: 40px;
+    width: 100%;
+  }
+
+  .sidebar-toggle {
+    transform: rotate(90deg);
+  }
+
+  .player-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .teams-picks {
+    flex-direction: column;
+  }
+
+  .side-options {
+    flex-direction: column;
+  }
+
+  .picking-phase {
+    flex-direction: column;
+  }
+
+  .teams-container {
+    flex-direction: column;
+  }
+
+  .team-players-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  }
+
+  .pick-content-container {
+    flex-direction: column;
+  }
+
+  .picking-phase {
+    flex-direction: column;
+  }
+
+  .teams-container {
+    flex-direction: column;
+  }
+
+  .team-players-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  }
+}
+
+/* 选边阶段样式 */
+.side-picking-content {
+  padding: 2rem;
+}
+
+.side-picking-message {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.side-selection {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.side-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 2.5rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.side-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.side-btn.red-side {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+  border: 2px solid #dc3545;
+}
+
+.side-btn.blue-side {
+  background-color: rgba(13, 110, 253, 0.2);
+  color: #0d6efd;
+  border: 2px solid #0d6efd;
+}
+
+.side-btn.red-side:hover {
+  background-color: rgba(220, 53, 69, 0.3);
+}
+
+.side-btn.blue-side:hover {
+  background-color: rgba(13, 110, 253, 0.3);
+}
+
+.waiting-for-side-pick {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.teams-composition {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  gap: 2rem;
+}
+
+.team-composition {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.team-composition.team-red, .team-composition.side-red {
+  border-left: 4px solid #dc3545;
+}
+
+.team-composition.team-blue, .team-composition.side-blue {
+  border-left: 4px solid #0d6efd;
+}
+
+.team-composition h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.side-label {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.side-red .side-label {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.side-blue .side-label {
+  background-color: rgba(13, 110, 253, 0.2);
+  color: #0d6efd;
+}
+
+.team-characters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.team-character {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.team-character:hover {
+  transform: translateY(-3px);
+  background-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.character-avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  margin-bottom: 0.5rem;
+  object-fit: cover;
+}
+
+.character-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 992px) {
+  .side-picking-content {
+    padding: 1rem;
+  }
+
+  .teams-composition {
+    flex-direction: column;
+  }
+
+  .side-selection {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .team-characters {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+}
+
+.team-voice-tab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.alert-message {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-left: 3px solid #ff9800;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.pick-order {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #ff9800;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  border: 2px solid #1e1f2d;
+}
+
+.team-character {
+  position: relative;
+}
+
+.team-count {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: normal;
+}
+
+.empty-character {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.empty-avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  margin: 0 auto 0.5rem;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.empty-name {
+  color: #8b8fa3;
+  font-size: 0.9rem;
+}
+
+.side-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* 侧边栏观众席样式 */
+.spectators-sidebar {
+  padding-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 450px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.spectators-sidebar-list {
+  overflow-y: auto;
+  padding: 0.5rem 1rem;
+  flex: 1;
+}
+
+.spectator-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s;
+}
+
+.spectator-sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.spectator-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 10px;
+  object-fit: cover;
+}
+
+.spectator-name {
+  font-size: 0.9rem;
+  color: #fff;
+  flex: 1;
+}
+
+.join-team-btn {
+  margin-left: auto;
+}
+
+.join-spectator-btn {
+  font-size: 0.8rem;
+}
+
+.empty-spectators-sidebar {
+  padding: 20px;
+  text-align: center;
+  color: #a0a0a0;
+}
+
+/* 主区域聊天室样式 */
+.chat-container-main {
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+  overflow: hidden;
+}
+
+.chat-container-main .chat-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-container-main .chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.chat-container-main .chat-input {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 待选玩家池移动端样式 */
+@media (max-width: 992px) {
+  .pool-players {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .pool-players {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pool-player-avatar {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+.content-main-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content-main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0; /* 防止flex项目溢出 */
+  padding-bottom: 10px;
+}
+
+.chat-wrapper {
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 400px; /* 增加最小高度 */
+  max-height: 500px; /* 限制最大高度 */
+  background-color: rgba(0, 0, 0, 0.1);
+  position: relative; /* 添加相对定位 */
+  padding-bottom: 80px; /* 为输入框预留空间 */
+}
+
+.chat-wrapper .chat-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+  background-color: rgba(30, 31, 45, 0.95);
+  z-index: 5;
+}
+
+.chat-wrapper .chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  margin: 10px;
+  min-height: 180px;
+  max-height: calc(100% - 130px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 确保聊天输入框样式正确 */
+.chat-input {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 12px !important;
+  background-color: rgba(30, 31, 45, 0.95) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+  margin: 0 !important;
+  gap: 10px !important;
+  height: 70px !important;
+}
+
+@media (max-width: 992px) {
+  .chat-wrapper {
+    min-height: 450px !important;
+    max-height: none !important;
+    padding-bottom: 70px !important;
+  }
+
+  .chat-wrapper .chat-messages {
+    max-height: calc(100% - 80px) !important;
+    min-height: 180px !important;
+  }
+
+  .chat-input {
+    height: 60px !important;
+  }
+}
+
+.chat-wrapper .chat-tab {
+  padding: 10px 15px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.chat-wrapper .chat-tab.active {
+  color: #fff;
+  border-bottom: 2px solid #ff9800;
+}
+
+.chat-wrapper .chat-tab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.chat-wrapper .message {
+  display: flex;
+  margin-bottom: 10px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-wrapper .message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.chat-wrapper .message-content {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.chat-wrapper .message-author {
+  font-weight: 500;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.chat-wrapper .message-time {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chat-wrapper .system-message .message-content {
+  background-color: rgba(255, 152, 0, 0.08);
+  color: #ff9800;
+  text-align: center;
+  font-weight: 500;
+  padding: 8px 15px;
+  border-radius: 20px;
+  box-shadow: none;
+  border: 1px solid rgba(255, 152, 0, 0.2);
+}
+
+.chat-input input {
+  flex: 1 !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  padding: 8px 15px !important;
+  color: #fff !important;
+  margin: 0 !important;
+  height: 40px !important;
+}
+
+.chat-actions {
+  display: flex !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.btn-emoji,
+.btn-send {
+  min-width: 40px !important;
+  height: 40px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-emoji {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.btn-send {
+  background-color: #ff9800 !important;
+  padding: 0 15px !important;
+}
+
+/* 语音相关样式 */
+.team-voice-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+}
+
+.team-voice-tab {
+  flex: 1;
+  padding: 8px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.team-voice-tab.active {
+  color: #fff;
+  border-bottom: 2px solid #ff9800;
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+/* 玩家列表 -->
+<div class="players-list">
+  <h3>玩家列表 ({{ room.players.length }}/{{ room.maxPlayers }})</h3>
+  <div class="player-items">
+    <div v-for="player in room.players" :key="player.userId" class="player-item">
+      <div class="player-info">
+        <span class="player-name">{{ player.username }}</span>
+        <span v-if="player.userId === room.creatorId" class="creator-badge">房主</span>
+      </div>
+      <div class="player-actions">
+        <el-button
+          v-if="isCreator && player.userId !== userStore.userId"
+          type="danger"
+          size="small"
+          @click="kickPlayer(player.userId, player.username)"
+          :icon="Delete"
+        >
+          踢出
+        </el-button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 观众列表 -->
+<div class="spectators-list">
+  <h3>观众列表 ({{ room.spectators.length }})</h3>
+  <div class="spectator-items">
+    <div v-for="spectator in room.spectators" :key="spectator.userId" class="spectator-item">
+      <div class="spectator-info">
+        <span class="spectator-name">{{ spectator.username }}</span>
+      </div>
+      <div class="spectator-actions">
+        <el-button
+          v-if="isCreator && spectator.userId !== userStore.userId"
+          type="danger"
+          size="small"
+          @click="kickPlayer(spectator.userId, spectator.username)"
+          :icon="Delete"
+        >
+          踢出
+        </el-button>
+      </div>
+    </div>
+  </div>
+</div>
+
+.players-list,
+.spectators-list {
+  margin-bottom: 20px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.players-list h3,
+.spectators-list h3 {
+  margin: 0 0 10px 0;
+  color: #ff9800;
+  font-size: 16px;
+}
+
+.player-items,
+.spectator-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-item,
+.spectator-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.player-item:hover,
+.spectator-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.player-info,
+.spectator-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-name,
+.spectator-name {
+  color: #fff;
+  font-size: 14px;
+}
+
+.creator-badge {
+  background-color: #ff9800;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.player-actions,
+.spectator-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 确保踢出按钮样式正确 */
+.el-button--danger {
+  background-color: #f56c6c;
+  border-color: #f56c6c;
+  color: #fff;
+}
+
+.el-button--danger:hover {
+  background-color: #f78989;
+  border-color: #f78989;
+}
+
+/* 玩家列表和观众列表样式 */
+.players-sidebar,
+.spectators-sidebar {
+  margin-bottom: 20px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.players-sidebar .card-header,
+.spectators-sidebar .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.players-sidebar .section-title,
+.spectators-sidebar .section-title {
+  margin: 0;
+  color: #ff9800;
+  font-size: 16px;
+}
+
+.players-sidebar-list,
+.spectators-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-sidebar-item,
+.spectator-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.player-sidebar-item:hover,
+.spectator-sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.player-avatar,
+.spectator-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.player-name,
+.spectator-name {
+  color: #fff;
+  font-size: 14px;
+  flex: 1;
+}
+
+.creator-badge {
+  background-color: #ff9800;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.empty-players-sidebar,
+.empty-spectators-sidebar {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 10px;
+  font-style: italic;
+}
+
+/* 确保踢出按钮样式正确 */
+.el-button--danger {
+  background-color: #f56c6c;
+  border-color: #f56c6c;
+  color: #fff;
+}
+
+.el-button--danger:hover {
+  background-color: #f78989;
+  border-color: #f78989;
+}
+
+/* 踢出按钮样式 */
+.kick-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.player-card:hover .kick-button {
+  opacity: 1;
+}
+
+.player-card {
+  position: relative;
+}
+
+/* 警告文本样式 */
+.warning-text {
+  color: #e6a23c;
+  margin-top: 10px;
+  font-size: 14px;
+}

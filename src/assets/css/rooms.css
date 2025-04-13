@@ -1,0 +1,223 @@
+/* Rooms.vue 样式 */
+.rooms-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.room-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.room-filter {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group select, .filter-group input {
+  padding: 0.5rem;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--light-text);
+}
+
+.room-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.room-card {
+  background-color: #1E1F2D;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.room-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.room-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.room-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.status-waiting {
+  background-color: #FDA92C;
+  color: #000;
+}
+
+.status-gaming {
+  background-color: #00CFA1;
+  color: #fff;
+}
+
+.status-picking {
+  background-color: #5F79FC;
+  color: #fff;
+}
+
+.status-ended {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.room-card-info {
+  margin-bottom: 1rem;
+}
+
+.room-card-info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.info-label {
+  width: 70px;
+  font-size: 0.9rem;
+  color: #a0a0a0;
+}
+
+.info-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.player-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.room-card-players {
+  margin-bottom: 1rem;
+}
+
+.player-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.more-players {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.3);
+  font-size: 0.8rem;
+}
+
+.player-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.slot-count {
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.slot-bar {
+  height: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.slot-filled {
+  height: 100%;
+  background: linear-gradient(90deg, #5F79FC, #00CFA1);
+}
+
+.room-card-details {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #a0a0a0;
+  height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.room-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.room-time {
+  font-size: 0.8rem;
+  color: #a0a0a0;
+}
+
+.room-viewers-icon {
+  color: #5F79FC;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.pagination-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #1E1F2D;
+  color: #a0a0a0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination-btn.active, .pagination-btn:hover:not(:disabled) {
+  background-color: #5F79FC;
+  color: white;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

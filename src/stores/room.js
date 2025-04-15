@@ -652,8 +652,6 @@ export const useRoomStore = defineStore('room', () => {
       isSpectator = roomData.spectators.some(spectator => spectator.userId === userStore.userId)
     }
 
-    console.log('用户是否在房间中:', isPlayer || isSpectator, '玩家:', isPlayer, '观众:', isSpectator)
-
     return isPlayer || isSpectator
   }
 

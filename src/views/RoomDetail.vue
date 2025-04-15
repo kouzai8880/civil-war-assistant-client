@@ -675,9 +675,9 @@ const loadRoomDetail = async () => {
 const setupRoomEventListeners = () => {
   // 添加事件监听器
   console.log('添加roomJoined事件监听器')
-  window.addEventListener('roomJoined', (event) => {
-    handleRoomJoined(event)
-  })
+  // 添加全局变量来跟踪事件监听器的状态
+  window.roomEventListenersAdded = true
+  window.addEventListener('roomJoined', handleRoomJoined)
 
   window.addEventListener('roleChanged', handleRoleChanged)
   window.addEventListener('roomStatusUpdate', handleRoomStatusUpdate)
@@ -696,15 +696,8 @@ const setupRoomEventListeners = () => {
 
   // 添加选人选边相关的事件监听器
   // 使用自定义事件监听器
-  window.addEventListener('playerSelected', (event) => {
-    console.log('收到playerSelected事件:', event.detail)
-    handlePlayerSelected(event.detail)
-  })
-
-  window.addEventListener('teamSelectedSide', (event) => {
-    console.log('收到teamSelectedSide事件:', event.detail)
-    handleTeamSelectedSide(event.detail)
-  })
+  window.addEventListener('playerSelected', handlePlayerSelectedEvent)
+  window.addEventListener('teamSelectedSide', handleTeamSelectedSideEvent)
 
   // 注册服务器事件到全局事件
   const socket = socketStore.getSocket()
@@ -726,10 +719,11 @@ const setupRoomEventListeners = () => {
 }
 // 清除房间事件监听器
 const cleanupRoomEventListeners = () => {
-  // 注意：由于我们使用了匿名函数作为roomJoined的监听器，
-  // 这里无法直接移除它。在实际应用中，应该保存监听器引用或使用命名函数。
-  // 这里我们只移除其他监听器。
-
+  // 移除所有事件监听器
+  console.log('清除房间事件监听器，包括roomJoined事件')
+  // 清除全局变量
+  window.roomEventListenersAdded = false
+  window.removeEventListener('roomJoined', handleRoomJoined)
   window.removeEventListener('roleChanged', handleRoleChanged)
   window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
   window.removeEventListener('spectatorJoined', handleSpectatorJoined)
@@ -746,14 +740,36 @@ const cleanupRoomEventListeners = () => {
   window.removeEventListener('socketReconnected', handleSocketReconnected)
 
   // 移除选人选边相关的事件监听器
-  window.removeEventListener('playerSelected', handlePlayerSelected)
-  window.removeEventListener('teamSelectedSide', handleTeamSelectedSide)
+  // 使用与添加时相同的函数引用
+  try {
+    window.removeEventListener('playerSelected', handlePlayerSelectedEvent)
+    window.removeEventListener('teamSelectedSide', handleTeamSelectedSideEvent)
+  } catch (error) {
+    console.error('移除选人选边事件监听器失败:', error)
+  }
 
   // 移除Socket.io事件监听器
   const socket = socketStore.getSocket()
   if (socket) {
+    // 移除所有事件监听器
     socket.off('player.selected')
     socket.off('team.selected_side')
+    socket.off('new_message')
+    socket.off('roomJoined')
+    socket.off('roleChanged')
+    socket.off('roomStatusUpdate')
+    socket.off('spectatorJoined')
+    socket.off('playerJoined')
+    socket.off('spectatorLeft')
+    socket.off('playerLeft')
+    socket.off('spectatorMoveToPlayer')
+    socket.off('playerMoveToSpectator')
+    socket.off('gameStarted')
+    socket.off('playerStatusUpdate')
+    socket.off('teamUpdate')
+    socket.off('socketError')
+    socket.off('socketReconnected')
+    console.log('Socket.io 事件监听器已移除')
   }
 
   console.log('已清除房间事件监听器')
@@ -1137,6 +1153,18 @@ const handleSocketReconnected = (event) => {
   }
 }
 
+// 选人选边事件处理函数
+// 使用命名函数作为事件处理程序，以便正确移除
+const handlePlayerSelectedEvent = (event) => {
+  console.log('收到playerSelected事件:', event.detail)
+  handlePlayerSelected(event.detail)
+}
+
+const handleTeamSelectedSideEvent = (event) => {
+  console.log('收到teamSelectedSide事件:', event.detail)
+  handleTeamSelectedSide(event.detail)
+}
+
 // 处理玩家被选择事件
 const handlePlayerSelected = (data) => {
   console.log('收到player.selected事件:', data)
@@ -1292,6 +1320,9 @@ onMounted(async () => {
     console.log('先设置房间事件监听器')
     setupRoomEventListeners()
 
+    // 添加延迟，确保事件监听器已经正确添加
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     // 确保WebSocket连接
     if (!socketStore.isConnected) {
       await socketStore.connect()
@@ -1356,24 +1387,6 @@ onUnmounted(() => {
   console.log('组件卸载，清除事件监听器')
   // 清除所有房间事件监听器
   cleanupRoomEventListeners()
-
-  // 手动清除roomJoined事件监听器
-  try {
-    const allEvents = [
-      'roomJoined', 'roleChanged', 'roomStatusUpdate', 'spectatorJoined', 'playerJoined',
-      'spectatorLeft', 'playerLeft', 'spectatorMoveToPlayer', 'playerMoveToSpectator',
-      'gameStarted', 'playerStatusUpdate', 'teamUpdate', 'newMessage', 'socketError',
-      'socketReconnected'
-    ]
-
-    allEvents.forEach(eventName => {
-      window.removeEventListener(eventName, () => console.log(`尝试移除 ${eventName} 事件监听器`))
-    })
-
-    console.log('已手动清除所有事件监听器')
-  } catch (error) {
-    console.error('清除事件监听器时出错:', error)
-  }
 })
 
 // 将用户添加到观众席

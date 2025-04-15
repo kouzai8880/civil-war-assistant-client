@@ -33,7 +33,7 @@ const showCreateRoomModal = ref(false)
 // 密码输入对话框
 const showPasswordDialog = ref(false)
 const passwordInput = ref('')
-const currentRoomId = ref(null)
+const currentRoom = ref(null)
 
 // 热门房间
 const hotRooms = ref([])
@@ -103,7 +103,7 @@ const handleRoomCreated = (roomData) => {
 }
 
 // 加入房间
-const joinRoom = async (roomId) => {
+const joinRoom = async (room) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     router.push('/login')
@@ -113,12 +113,22 @@ const joinRoom = async (roomId) => {
   try {
     isLoading.value = true
 
-    // 获取房间信息，检查是否需要密码
-    const room = hotRooms.value.find(r => r.id === roomId);
+    console.log('准备加入房间:', room.id, room.name)
 
-    if (room && room.hasPassword) {
+    // 检查用户是否已经在房间中（作为玩家或观众）
+    const isAlreadyInRoom = room.players && room.players.some(player => player.userId === userStore.userId);
+    const isSpectator = room.spectators && room.spectators.some(spectator => spectator.userId === userStore.userId);
+
+    if (isAlreadyInRoom || isSpectator) {
+      console.log('用户已在房间中，直接跳转到房间详情页');
+      router.push(`/room/${room.id}`);
+      return;
+    }
+
+    // 检查房间是否需要密码
+    if (room.hasPassword) {
       // 如果需要密码，弹出密码输入对话框
-      currentRoomId.value = roomId;
+      currentRoom.value = room;
       passwordInput.value = '';
       showPasswordDialog.value = true;
       isLoading.value = false;
@@ -126,7 +136,7 @@ const joinRoom = async (roomId) => {
     }
 
     // 如果不需要密码，直接加入房间
-    await joinRoomWithPassword(roomId, null);
+    await joinRoomWithPassword(room.id, null);
   } catch (error) {
     console.error('加入房间失败:', error)
     ElMessage.error(error.message || '加入房间失败，请稍后重试')
@@ -182,8 +192,8 @@ const handlePasswordSubmit = () => {
     return
   }
 
-  if (currentRoomId.value) {
-    joinRoomWithPassword(currentRoomId.value, passwordInput.value)
+  if (currentRoom.value) {
+    joinRoomWithPassword(currentRoom.value.id, passwordInput.value)
   }
 }
 
@@ -191,7 +201,7 @@ const handlePasswordSubmit = () => {
 const handlePasswordCancel = () => {
   showPasswordDialog.value = false
   passwordInput.value = ''
-  currentRoomId.value = null
+  currentRoom.value = null
 }
 
 // 查看更多房间
@@ -297,7 +307,7 @@ const formatTime = (timestamp) => {
                   <div class="room-footer">
                     <a href="javascript:void(0)"
                        :class="['btn', room.status === 'waiting' ? 'btn-primary' : 'btn-outline']"
-                       @click.stop="joinRoom(room.id)">
+                       @click.stop="joinRoom(room)">
                       {{ room.status === 'waiting' ? '加入房间' : '观战中+' }}
                     </a>
                   </div>

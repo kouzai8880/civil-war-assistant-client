@@ -156,20 +156,29 @@ export const useSocketStore = defineStore('socket', () => {
         joinData.password = password
       }
 
+      // 添加强制加入标志，即使玩家已经在房间中，也触发roomJoined事件
+      // 这样可以确保玩家重新连接后能获取最新的聊天记录和房间数据
+      joinData.forceJoin = true
+
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
       if (socket) {
-        // 添加回调函数，处理房间已满的情况
-        socket.emit('joinRoom', joinData, (response) => {
-          console.log('joinRoom响应:', response)
+        // 添加延迟，确保事件监听器有足够的时间添加
+        // 这对于第二次进入房间很重要，因为事件监听器可能还没有添加完成
+        setTimeout(() => {
+          console.log('发送joinRoom事件，确保事件监听器已经添加')
+          // 添加回调函数，处理房间已满的情况
+          socket.emit('joinRoom', joinData, (response) => {
+            console.log('joinRoom响应:', response)
 
-          // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
-          if (response.status === 'error' &&
-              (response.message.includes('已满') || response.message.includes('full'))) {
-            console.log('房间已满，自动尝试加入观战席')
-            joinAsSpectator(roomId)
-          }
-        })
+            // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
+            if (response.status === 'error' &&
+                (response.message.includes('已满') || response.message.includes('full'))) {
+              console.log('房间已满，自动尝试加入观战席')
+              joinAsSpectator(roomId)
+            }
+          })
+        }, 100) // 添加100毫秒的延迟，确保事件监听器有足够的时间添加
 
         // 不立即设置currentRoomId，等待roomJoined事件
         return true
@@ -386,11 +395,29 @@ export const useSocketStore = defineStore('socket', () => {
 
     // 房间基础事件
     on('roomJoined', (response) => {
+      console.log('[WebSocket] 收到roomJoined事件:', response)
       if (response.status === 'success') {
         const roomData = response.data.room
         currentRoomId.value = roomData.id
         // 将事件分发给其他组件
         try {
+          // 检查全局变量，确认事件监听器是否已经添加
+          const hasEventListener = window.roomEventListenersAdded === true
+          console.log('[WebSocket] 是否有roomJoined事件监听器:', hasEventListener ? '是' : '否')
+
+          // 如果没有事件监听器，则等待一段时间再分发事件
+          if (!hasEventListener) {
+            console.log('[WebSocket] 事件监听器还没有添加，等待200毫秒再分发事件')
+            setTimeout(() => {
+              console.log('[WebSocket] 尝试再次分发roomJoined事件')
+              window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
+            }, 200)
+            return
+          }
+
+          console.log('[WebSocket] 尝试分发roomJoined事件')
+
+          // 分发事件
           window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
           console.log('[WebSocket] roomJoined事件分发成功')
         } catch (error) {

@@ -673,10 +673,16 @@ const loadRoomDetail = async () => {
 
 // 设置房间事件监听器
 const setupRoomEventListeners = () => {
+  // 如果事件监听器已经激活，则不重复添加
+  const socketStore = useSocketStore()
+  if (socketStore.areEventListenersActive()) {
+    console.log('事件监听器已经激活，不重复添加')
+    return
+  }
+
+  console.log('添加房间事件监听器')
+
   // 添加事件监听器
-  console.log('添加roomJoined事件监听器')
-  // 添加全局变量来跟踪事件监听器的状态
-  window.roomEventListenersAdded = true
   window.addEventListener('roomJoined', handleRoomJoined)
 
   window.addEventListener('roleChanged', handleRoleChanged)
@@ -715,14 +721,32 @@ const setupRoomEventListeners = () => {
     console.error('无法获取Socket实例，无法注册选人选边事件')
   }
 
+  // 设置事件监听器状态为激活
+  socketStore.setEventListenersActive(true)
+
+  // 检查是否有缓存的roomJoined事件
+  const cachedRoomJoinedEvent = socketStore.getCachedEvent('roomJoined')
+  if (cachedRoomJoinedEvent) {
+    console.log('发现缓存的roomJoined事件，立即处理')
+    handleRoomJoined({ detail: cachedRoomJoinedEvent })
+    // 清除缓存的事件，避免重复处理
+    socketStore.clearCachedEvent('roomJoined')
+  }
+
   console.log('已添加房间事件监听器')
 }
 // 清除房间事件监听器
 const cleanupRoomEventListeners = () => {
+  // 如果事件监听器未激活，则不需要清除
+  const socketStore = useSocketStore()
+  if (!socketStore.areEventListenersActive()) {
+    console.log('事件监听器未激活，不需要清除')
+    return
+  }
+
+  console.log('清除房间事件监听器')
+
   // 移除所有事件监听器
-  console.log('清除房间事件监听器，包括roomJoined事件')
-  // 清除全局变量
-  window.roomEventListenersAdded = false
   window.removeEventListener('roomJoined', handleRoomJoined)
   window.removeEventListener('roleChanged', handleRoleChanged)
   window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
@@ -771,6 +795,9 @@ const cleanupRoomEventListeners = () => {
     socket.off('socketReconnected')
     console.log('Socket.io 事件监听器已移除')
   }
+
+  // 设置事件监听器状态为非激活
+  socketStore.setEventListenersActive(false)
 
   console.log('已清除房间事件监听器')
 }
@@ -1292,8 +1319,8 @@ const joinRoomWithPassword = async () => {
     if (success) {
       passwordDialogVisible.value = false
       passwordInput.value = ''
-      // 重新加载房间详情
-      await refreshRoomDetail(false)
+      // 不需要重新加载房间详情，依赖roomJoined事件获取最新数据
+      console.log('密码验证成功，等待roomJoined事件获取最新数据')
     } else {
       passwordError.value = roomStore.error || '密码错误，请重试'
     }
@@ -1320,32 +1347,25 @@ onMounted(async () => {
     console.log('先设置房间事件监听器')
     setupRoomEventListeners()
 
-    // 添加延迟，确保事件监听器已经正确添加
-    await new Promise(resolve => setTimeout(resolve, 100))
-
     // 确保WebSocket连接
     if (!socketStore.isConnected) {
       await socketStore.connect()
     }
 
-    // 先获取房间详情，但不自动加入房间
-    await refreshRoomDetail(false)
+    // 检查是否已有房间数据
+    const hasRoomData = roomStore.roomData && roomStore.roomData.value && roomStore.roomData.value.id === roomId.value
 
-    if (!room.value) {
-      router.push('/rooms')
-      // 不使用return，而是使用条件判断，确保finally块会执行
+    if (hasRoomData) {
+      console.log('已有房间数据，不需要重新获取')
+      // 使用现有数据更新UI
+      if (roomStore.roomData && roomStore.roomData.value) {
+        room.value = roomStore.roomData.value
+      }
     } else {
+      // 直接发送joinRoom事件，依赖roomJoined事件获取最新数据
+      console.log(`用户 ${userStore.username} 尝试加入房间 ${roomId.value}...`)
 
-      // 检查用户是否已经在房间中
-      // 如果房间数据结构是嵌套的，需要使用room.value.room
-      const roomData = room.value && room.value.room ? room.value.room : room.value
-      const isAlreadyInRoom = roomStore.isUserInRoom(roomData)
-
-      // 无论用户是否已在房间中，都发送joinRoom请求
-      // 这样可以确保在用户刷新页面或重新连接后能获取最新的聊天记录和房间状态
-      console.log(`用户 ${userStore.username} ${isAlreadyInRoom ? '已在房间中，但仍需要发送joinRoom以获取聊天记录' : '尝试加入房间'} ${roomId.value}...`)
-
-      // 先尝试不带密码加入房间
+      // 尝试不带密码加入房间
       const success = await roomStore.joinRoom(roomId.value)
 
       if (!success) {
@@ -1353,20 +1373,14 @@ onMounted(async () => {
         if (roomStore.error && roomStore.error.includes('密码')) {
           // 显示密码输入对话框
           passwordDialogVisible.value = true
-          // 不使用return，而是使用条件判断，确保finally块会执行
-        } else if (!isAlreadyInRoom) {
-          // 如果用户不在房间中且加入失败，显示错误并跳转
+        } else {
+          // 其他错误，显示错误并跳转
           ElMessage.error(roomStore.error || '加入房间失败')
           router.push('/rooms')
-          // 不使用return，而是使用条件判断，确保finally块会执行
-        } else {
-          // 如果用户已在房间中但重新加入失败，只显示警告但不跳转
-          console.warn('重新加入房间失败，但用户已在房间中，继续使用当前数据')
-          ElMessage.warning('更新房间数据失败，可能会看不到最新消息')
         }
       }
+      // 成功加入房间后，会通过roomJoined事件获取最新数据
     }
-
   } catch (error) {
     console.error('加载房间失败:', error)
     ElMessage.error('加载房间失败，请稍后重试')
@@ -1382,11 +1396,10 @@ const setupRefreshInterval = () => {
   console.log('不再使用定期刷新，而是依靠WebSocket通知刷新房间数据')
 }
 
-// 组件卸载时清除事件监听器
+// 组件卸载时不自动清除事件监听器
 onUnmounted(() => {
-  console.log('组件卸载，清除事件监听器')
-  // 清除所有房间事件监听器
-  cleanupRoomEventListeners()
+  console.log('组件卸载，但不清除事件监听器，确保玩家在房间外也能收到更新')
+  // 不调用 cleanupRoomEventListeners()
 })
 
 // 将用户添加到观众席
@@ -1579,43 +1592,33 @@ const leaveRoom = async () => {
   }
 
   console.log(`${userStore.username} 正在离开房间...`)
+  isLoading.value = true
 
   try {
-    // 确保 WebSocket 已连接
-    if (!socketStore.isConnected) {
-      console.log('WebSocket未连接，尝试连接...')
-      await socketStore.connect()
-      if (!socketStore.isConnected) {
-        throw new Error('WebSocket连接失败，无法离开房间')
-      }
+    // 调用房间存储的离开房间方法
+    const success = await roomStore.leaveRoom(roomId.value)
+
+    if (success) {
+      // 清除事件监听器
+      cleanupRoomEventListeners()
+
+      // 跳转到房间列表页面
+      router.push('/rooms')
+
+      ElMessage.success('成功离开房间')
+    } else {
+      ElMessage.error('离开房间失败，请重试')
     }
-
-    // 直接使用WebSocket离开房间
-    const success = socketStore.leaveRoom()
-
-    if (!success) {
-      throw new Error('发送WebSocket事件失败')
-    }
-
-    console.log('成功发送离开房间事件')
-    ElMessage.success('正在离开房间...')
-
-    // 等待WebSocket事件处理
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // 清除当前房间数据
-    roomStore.setCurrentRoom(null)
-
-    console.log('成功离开房间，准备返回房间列表')
-    // 不再显示第二次成功提示，因为事件处理中会显示
-    router.push('/rooms')
   } catch (error) {
-    console.error('离开房间失败', error)
-    ElMessage.error('离开房间失败')
+    console.error('离开房间时出错:', error)
+    ElMessage.error(error.message || '离开房间失败，请重试')
+
     // 即使出错，仍然尝试返回房间列表
     setTimeout(() => {
       router.push('/rooms')
     }, 1000)
+  } finally {
+    isLoading.value = false
   }
 }
 

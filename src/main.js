@@ -1,4 +1,5 @@
 import './assets/main.css'
+import './assets/fonts/fonts.css' // 导入本地字体文件
 
 import { createApp } from 'vue'
 import App from './App.vue'

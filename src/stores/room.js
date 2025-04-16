@@ -109,7 +109,7 @@ export const useRoomStore = defineStore('room', () => {
   // 计算属性 - 房间详情相关
   // 房间数据
   const roomData = computed(() => {
-    if (!currentRoom.value) return null
+    if (!currentRoom.value) return { id: null, players: [], spectators: [], teams: [], messages: [] }
     return currentRoom.value.room ? currentRoom.value.room : currentRoom.value
   })
 
@@ -1149,9 +1149,40 @@ export const useRoomStore = defineStore('room', () => {
       // 房间详情页会自动加载最新数据
 
       return true
-    } catch (err) {
-      console.error('加入房间失败:', err)
-      error.value = err.message || '加入房间失败，请稍后重试'
+    } catch (error) {
+      console.error('加入房间失败:', error)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 离开房间
+  const leaveRoom = async (roomId) => {
+    if (!roomId) return false
+
+    loading.value = true
+    error.value = null
+
+    try {
+      // 调用Socket.io离开房间
+      const socketStore = useSocketStore()
+      return new Promise((resolve) => {
+        socketStore.leaveRoom(roomId, (response) => {
+          if (response.status === 'success') {
+            // 清除房间数据
+            roomData.value = null
+            resolve(true)
+          } else {
+            console.error('离开房间失败:', response.message)
+            error.value = response.message || '离开房间失败'
+            resolve(false)
+          }
+        })
+      })
+    } catch (error) {
+      console.error('离开房间时出错:', error)
+      error.value = error.message || '离开房间失败'
       return false
     } finally {
       loading.value = false
@@ -1343,6 +1374,7 @@ export const useRoomStore = defineStore('room', () => {
     createRoom,
     fetchRoomDetail,
     joinRoom,
+    leaveRoom,
     updateRoomSettings,
     joinAsPlayer,
     joinAsSpectator,

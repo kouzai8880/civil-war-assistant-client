@@ -19,6 +19,12 @@ export const useSocketStore = defineStore('socket', () => {
   const voiceEnabled = ref(false)
   const isMuted = ref(false)
 
+  // 事件监听器状态
+  const eventListenersActive = ref(false)
+
+  // 事件缓存，用于存储事件数据，以便在监听器添加后可以获取之前的事件
+  const eventCache = ref({})
+
   // 获取用户store
   const userStore = useUserStore()
 
@@ -174,7 +180,6 @@ export const useSocketStore = defineStore('socket', () => {
             // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
             if (response.status === 'error' &&
                 (response.message.includes('已满') || response.message.includes('full'))) {
-              console.log('房间已满，自动尝试加入观战席')
               joinAsSpectator(roomId)
             }
           })
@@ -258,22 +263,40 @@ export const useSocketStore = defineStore('socket', () => {
   }
 
   // 离开房间
-  const leaveRoom = () => {
-    if (!connected.value || !currentRoomId.value) return true
+  const leaveRoom = (roomId, callback) => {
+    if (!connected.value) {
+      error.value = 'WebSocket未连接，无法离开房间'
+      if (callback) callback({ status: 'error', message: error.value })
+      return false
+    }
+
+    // 如果没有提供roomId，使用当前房间ID
+    const targetRoomId = roomId || currentRoomId.value
+    if (!targetRoomId) {
+      if (callback) callback({ status: 'error', message: '房间ID不存在' })
+      return false
+    }
 
     try {
-      console.log(`发送leaveRoom事件，离开房间 ${currentRoomId.value}`)
+      console.log(`发送leaveRoom事件，离开房间 ${targetRoomId}`)
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
       if (socket) {
-        socket.emit('leaveRoom', { roomId: currentRoomId.value })
-        // 不立即设置currentRoomId为null，等待roomLeft事件
+        socket.emit('leaveRoom', { roomId: targetRoomId }, (response) => {
+          console.log('leaveRoom响应:', response)
+          if (response.status === 'success') {
+            currentRoomId.value = null
+          }
+          if (callback) callback(response)
+        })
         return true
       } else {
-        throw new Error('WebSocket实例不存在')
+        if (callback) callback({ status: 'error', message: 'Socket未连接' })
+        return false
       }
-    } catch (err) {
-      error.value = err.message || '离开房间失败'
+    } catch (error) {
+      console.error('离开房间失败:', error)
+      if (callback) callback({ status: 'error', message: error.message || '离开房间失败' })
       return false
     }
   }
@@ -401,23 +424,14 @@ export const useSocketStore = defineStore('socket', () => {
         currentRoomId.value = roomData.id
         // 将事件分发给其他组件
         try {
-          // 检查全局变量，确认事件监听器是否已经添加
-          const hasEventListener = window.roomEventListenersAdded === true
-          console.log('[WebSocket] 是否有roomJoined事件监听器:', hasEventListener ? '是' : '否')
+          // 使用新的事件监听器状态管理机制
+          console.log('[WebSocket] 事件监听器状态:', eventListenersActive.value ? '激活' : '非激活')
 
-          // 如果没有事件监听器，则等待一段时间再分发事件
-          if (!hasEventListener) {
-            console.log('[WebSocket] 事件监听器还没有添加，等待200毫秒再分发事件')
-            setTimeout(() => {
-              console.log('[WebSocket] 尝试再次分发roomJoined事件')
-              window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
-            }, 200)
-            return
-          }
-
-          console.log('[WebSocket] 尝试分发roomJoined事件')
+          // 将事件缓存到全局状态
+          eventCache.value.roomJoined = response
 
           // 分发事件
+          console.log('[WebSocket] 分发roomJoined事件')
           window.dispatchEvent(new CustomEvent('roomJoined', { detail: response }))
           console.log('[WebSocket] roomJoined事件分发成功')
         } catch (error) {
@@ -652,6 +666,31 @@ export const useSocketStore = defineStore('socket', () => {
     listeners.value = {}
   }
 
+  // 获取事件监听器状态
+  const areEventListenersActive = () => {
+    return eventListenersActive.value
+  }
+
+  // 设置事件监听器状态
+  const setEventListenersActive = (active) => {
+    console.log(`设置事件监听器状态为: ${active ? '激活' : '非激活'}`)
+    eventListenersActive.value = active
+  }
+
+  // 获取缓存的事件数据
+  const getCachedEvent = (eventName) => {
+    return eventCache.value[eventName]
+  }
+
+  // 清除缓存的事件数据
+  const clearCachedEvent = (eventName) => {
+    if (eventCache.value[eventName]) {
+      delete eventCache.value[eventName]
+      return true
+    }
+    return false
+  }
+
   // 获取Socket实例
   const getSocket = () => {
     return getSocketService()
@@ -795,6 +834,10 @@ export const useSocketStore = defineStore('socket', () => {
     on,
     off,
     cleanupListeners,
+    areEventListenersActive,
+    setEventListenersActive,
+    getCachedEvent,
+    clearCachedEvent,
     getSocket
   }
 })

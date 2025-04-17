@@ -716,7 +716,6 @@ const setupRoomEventListeners = () => {
   window.addEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
   window.addEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
   window.addEventListener('gameStarted', handleGameStarted)
-  window.addEventListener('playerStatusUpdate', handlePlayerStatusUpdate)
   window.addEventListener('teamUpdate', handleTeamUpdate)
   window.addEventListener('newMessage', handleNewMessage)
   window.addEventListener('socketError', handleSocketError)
@@ -789,7 +788,6 @@ const cleanupRoomEventListeners = () => {
   window.removeEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
   window.removeEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
   window.removeEventListener('gameStarted', handleGameStarted)
-  window.removeEventListener('playerStatusUpdate', handlePlayerStatusUpdate)
   window.removeEventListener('teamUpdate', handleTeamUpdate)
   window.removeEventListener('newMessage', handleNewMessage)
   window.removeEventListener('socketError', handleSocketError)
@@ -1063,50 +1061,21 @@ const handlePlayerLeft = (event) => {
 }
 
 const handleSpectatorMoveToPlayer = (event) => {
-  console.log('收到spectatorMoveToPlayer事件:', event.detail)
   room.value = roomStore.roomData;
-  //打印room.value
-  console.log('room.value:', room.value);
 }
 
 const handlePlayerMoveToSpectator = (event) => {
-  console.log('收到playerMoveToSpectator事件:', event.detail)
   room.value = roomStore.roomData;
-  //打印room.value
-  console.log('room.value:', room.value);
 }
 
 const handleGameStarted = (event) => {
   console.log('收到gameStarted事件:', event.detail)
- //addSystemMessage('游戏开始！祈祷各位玩家游戏愉快')
-  refreshRoomDetail(false)
-}
-
-const handlePlayerStatusUpdate = (event) => {
-  console.log('收到playerStatusUpdate事件:', event.detail)
-  if (event.detail && event.detail.userId && room.value) {
-    const player = room.value.players?.find(p => p.userId === event.detail.userId)
-    if (player) {
-      if (event.detail.status === 'ready') {
-       //addSystemMessage(`${player.username || '玩家'} 已准备就纪`)
-      } else if (event.detail.status === 'not-ready') {
-       //addSystemMessage(`${player.username || '玩家'} 取消了准备`)
-      }
-    }
-    refreshRoomDetail(false)
-  }
+  room.value = roomStore.roomData;
 }
 
 const handleTeamUpdate = (event) => {
   console.log('收到teamUpdate事件:', event.detail)
   if (event.detail && event.detail.teamId && room.value) {
-    if (event.detail.side) {
-      const team = room.value.teams?.find(t => t.id === event.detail.teamId)
-      if (team) {
-        const sideName = event.detail.side === 'blue' ? '蓝方' : '红方'
-       //addSystemMessage(`${team.name || `队伍${team.id}`} 选择了 ${sideName}`)
-      }
-    }
     refreshRoomDetail(false)
   }
 }
@@ -1225,8 +1194,6 @@ const handleVoiceMuteUpdate = (event) => {
 }
 
 const handleVoiceData = (event) => {
-  // 不输出日志，避免刷屏
-
   // 如果有语音实例，则处理语音数据
   if (roomStore.voiceInstance && event.detail) {
     roomStore.voiceInstance.handleVoiceData(event.detail)
@@ -1521,15 +1488,6 @@ const addUserToSpectators = async () => {
 
     if (success) {
       console.log('成功发送加入观众席事件')
-      // ElMessage.success('正在进入观众席...')
-
-      // 等待WebSocket事件处理
-      //await new Promise(resolve => setTimeout(resolve, 500))
-
-      // 重新加载房间数据以获取最新状态
-      //await refreshRoomDetail(false)
-
-      // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
       throw new Error('发送WebSocket事件失败')
     }

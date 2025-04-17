@@ -684,6 +684,7 @@ const setupRoomEventListeners = () => {
 
   // 添加事件监听器
   window.addEventListener('roomJoined', handleRoomJoined)
+  window.addEventListener('roomLeft', handleRoomLeft) // 添加离开房间事件监听器
 
   window.addEventListener('roleChanged', handleRoleChanged)
   window.addEventListener('roomStatusUpdate', handleRoomStatusUpdate)
@@ -748,6 +749,7 @@ const cleanupRoomEventListeners = () => {
 
   // 移除所有事件监听器
   window.removeEventListener('roomJoined', handleRoomJoined)
+  window.removeEventListener('roomLeft', handleRoomLeft) // 移除离开房间事件监听器
   window.removeEventListener('roleChanged', handleRoleChanged)
   window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
   window.removeEventListener('spectatorJoined', handleSpectatorJoined)
@@ -1034,6 +1036,41 @@ const handleRoomJoined = (event) => {
     console.error('处理roomJoined事件时出错:', error);
   }
 }
+
+// 处理离开房间事件
+const handleRoomLeft = (event) => {
+  console.log('收到roomLeft事件:', event.detail);
+
+  try {
+    if (!event.detail) {
+      console.error('roomLeft事件数据为空');
+      return;
+    }
+
+    if (event.detail.status !== 'success') {
+      console.error('事件状态不是成功:', event.detail.status, event.detail.message);
+      return;
+    }
+
+    console.log('当前用户离开房间，准备跳转');
+
+    // 清除事件监听器
+    cleanupRoomEventListeners();
+
+    // 跳转到上一个路由
+    const previousRoute = roomStore.previousRoute || '/rooms';
+    console.log(`离开房间后跳转到上一个路由: ${previousRoute}`);
+
+    // 使用setTimeout确保跳转发生
+    setTimeout(() => {
+      router.push(previousRoute);
+    }, 100);
+
+    ElMessage.success('成功离开房间');
+} catch (error) {
+    console.error('处理roomLeft事件时出错:', error);
+  }
+};
 
 const handleRoleChanged = (event) => {
   console.log('收到roleChanged事件:', event.detail)
@@ -1759,32 +1796,32 @@ const leaveRoom = async () => {
   isLoading.value = true
 
   try {
-    // 调用房间存储的离开房间方法
-    const success = await roomStore.leaveRoom(roomId.value)
+    // 调用socket存储的离开房间方法
+    // 不需要处理回调，因为我们会在roomLeft事件中处理导航
+    console.log(`发送leaveRoom请求，离开房间 ${roomId.value}`);
+    socketStore.leaveRoom(roomId.value);
 
-    if (success) {
-      // 清除事件监听器
-      cleanupRoomEventListeners()
+    // 显示加载中提示，等待roomLeft事件
+    ElMessage.info('正在离开房间...');
 
-      // 跳转到上一个路由
-      const previousRoute = roomStore.previousRoute || '/rooms';
-      console.log(`离开房间后跳转到上一个路由: ${previousRoute}`);
-      router.push(previousRoute);
-
-      ElMessage.success('成功离开房间')
-    } else {
-      ElMessage.error('离开房间失败，请重试')
-    }
+    // 注意：不在这里清除事件监听器或跳转，而是在roomLeft事件中处理
   } catch (error) {
     console.error('离开房间时出错:', error)
     ElMessage.error(error.message || '离开房间失败，请重试')
 
-    // 即使出错，仍然尝试返回上一个路由
-    setTimeout(() => {
-      const previousRoute = roomStore.previousRoute || '/rooms';
-      console.log(`出错后跳转到上一个路由: ${previousRoute}`);
-      router.push(previousRoute);
-    }, 1000)
+    // 即使出错，仍然尝试发送leaveRoom请求
+    try {
+      socketStore.leaveRoom(roomId.value);
+    } catch (e) {
+      console.error('重试离开房间失败:', e);
+
+      // 如果二次尝试也失败，才手动跳转
+      setTimeout(() => {
+        const previousRoute = roomStore.previousRoute || '/rooms';
+        console.log(`出错后手动跳转到上一个路由: ${previousRoute}`);
+        router.push(previousRoute);
+      }, 1000);
+    }
   } finally {
     isLoading.value = false
   }

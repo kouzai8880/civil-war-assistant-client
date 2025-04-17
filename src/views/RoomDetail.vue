@@ -1485,9 +1485,18 @@ onMounted(async () => {
     if (hasRoomData) {
       console.log('已有房间数据，不需要重新获取')
       // 使用现有数据更新UI
-      if (roomStore.roomData && roomStore.roomData) {
+      if (roomStore.roomData) {
         room.value = roomStore.roomData
-        loadChatHistory(room.value.messages, true);
+
+        // 检查是否有消息数据
+        if (room.value.messages && room.value.messages.length > 0) {
+          console.log(`使用缓存的 ${room.value.messages.length} 条消息更新聊天记录`);
+          loadChatHistory(room.value.messages, true);
+        } else {
+          console.log('缓存的房间数据中没有消息，尝试重新获取');
+          // 即使有缓存数据，也尝试获取最新消息
+          refreshRoomDetail(false);
+        }
       }
     } else {
       // 直接发送joinRoom事件，依赖roomJoined事件获取最新数据
@@ -2196,14 +2205,26 @@ const refreshRoomDetail = async (autoJoin = false) => {
           // 处理房间数据
           const roomData = response.data
 
+          console.log('收到getRoomDetail响应:', response);
+
           // 确保关键属性总是有值，防止前端报错
           roomData.players = roomData.players || []
           roomData.teams = roomData.teams || []
           roomData.spectators = roomData.spectators || []
           roomData.messages = roomData.messages || []
 
+          // 检查是否有消息数据
+          if (roomData.messages && roomData.messages.length > 0) {
+            console.log(`收到 ${roomData.messages.length} 条消息，准备加载...`);
+            // 加载消息到聊天记录
+            loadChatHistory(roomData.messages, true);
+          } else {
+            console.log('没有收到消息数据');
+          }
+
           // 更新当前房间数据
           roomStore.setCurrentRoom(roomData)
+          room.value = roomData;
 
           resolve(roomData)
         } else {

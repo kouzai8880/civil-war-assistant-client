@@ -82,13 +82,17 @@ const userTeamId = computed(() => {
 
 // 根据消息类型过滤消息
 const filteredMessages = computed(() => {
+  console.log('消息数量:', (messages.value[activeChat.value] || []).length);
   // 如果不是公共聊天，或者选择了显示所有消息，直接返回全部消息
   if (activeChat.value !== 'public' || activeMessageType.value === 'all') {
+    //打印日志
+    console.log('不是公共聊天，或者选择了显示所有消息，直接返回全部消息');
     return messages.value[activeChat.value] || [];
   }
 
   // 如果选择了只显示系统消息
   if (activeMessageType.value === 'system') {
+    console.log('选择了只显示系统消息');
     return (messages.value[activeChat.value] || []).filter(msg =>
       msg.isSystem || msg.userId === 'system'
     );
@@ -96,11 +100,13 @@ const filteredMessages = computed(() => {
 
   // 如果选择了只显示普通消息
   if (activeMessageType.value === 'normal') {
+    console.log('选择了只显示普通消息');
     return (messages.value[activeChat.value] || []).filter(msg =>
       !msg.isSystem && msg.userId !== 'system'
     );
   }
-
+  // 打印消息数量：
+  console.log('消息数量:', (messages.value[activeChat.value] || []).length);
   // 默认返回全部消息
   return messages.value[activeChat.value] || [];
 })
@@ -1320,8 +1326,11 @@ const handleNewMessage = (event) => {
       console.log(`添加队伍${teamId}消息:`, formattedMessage);
     }
   } else {
-    // 公共消息直接添加
+        // 或者方法2：使用push后强制更新
     messages.value[channel].push(formattedMessage);
+    // 强制触发更新
+    messages.value = { ...messages.value };
+
     console.log('添加公共消息:', formattedMessage);
   }
 

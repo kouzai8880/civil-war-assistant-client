@@ -596,12 +596,7 @@ export const useSocketStore = defineStore('socket', () => {
       window.dispatchEvent(new CustomEvent('roomMessage', { detail: data }))
     })
 
-    // 新的消息事件
-    on('new_message', (data) => {
-      console.log('[WebSocket] 收到新消息:', data)
-      // 将事件分发给其他组件
-      window.dispatchEvent(new CustomEvent('newMessage', { detail: data }))
-    })
+    // 注意: 已删除重复的new_message事件监听器
 
     // 系统事件
     on('reconnect', (attemptNumber) => {

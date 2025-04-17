@@ -149,7 +149,7 @@ const selectedCharacter = ref(null)
 const selectedSide = ref(null)
 
 // 侧边栏状态
-const sidebarCollapsed = ref(false)
+// 已移除 sidebarCollapsed
 
 // 当前激活的聊天标签
 const activeChat = ref('public')
@@ -1788,10 +1788,10 @@ const toggleVoice = () => {
   }
 }
 
-// 切换侧边栏状态
-const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-}
+// 切换侧边栏状态 - 已移除
+// const toggleSidebar = () => {
+//   sidebarCollapsed.value = !sidebarCollapsed.value
+// }
 
 // 切换聊天频道
 const switchChatChannel = (channel) => {
@@ -2233,13 +2233,9 @@ const refreshRoomDetail = async (autoJoin = false) => {
             </div>
           </div>
 
-          <div class="main-content" :class="{'sidebar-collapsed': sidebarCollapsed}">
+          <div class="main-content">
             <!-- 侧边栏(观众和语音) -->
             <div class="sidebar">
-              <div class="sidebar-toggle" @click="toggleSidebar">
-                <i class="el-icon-arrow-right" v-if="sidebarCollapsed"></i>
-                <i class="el-icon-arrow-left" v-else></i>
-              </div>
 
               <!-- 观众席移到顶部 -->
               <div class="spectators-sidebar">

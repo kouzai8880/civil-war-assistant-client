@@ -165,24 +165,7 @@
   flex-shrink: 0;
 }
 
-.sidebar-collapsed .sidebar {
-  width: 40px;
-}
-
-.sidebar-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-}
+/* 已移除侧边栏收缩按钮样式 */
 
 .content-area {
   flex: 1;
@@ -201,10 +184,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.sidebar-collapsed .chat-container,
-.sidebar-collapsed .voice-container {
-  display: none;
-}
+/* 已移除侧边栏收缩相关样式 */
 
 .chat-tabs {
   display: flex;
@@ -1051,14 +1031,7 @@
     height: 300px;
   }
 
-  .sidebar-collapsed .sidebar {
-    height: 40px;
-    width: 100%;
-  }
-
-  .sidebar-toggle {
-    transform: rotate(90deg);
-  }
+  /* 已移除侧边栏收缩相关样式 */
 
   .player-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

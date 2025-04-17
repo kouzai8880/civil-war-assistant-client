@@ -223,6 +223,33 @@
   border-bottom: 2px solid #5f79fc;
 }
 
+/* 消息类型页签 */
+.message-type-tabs {
+  display: flex;
+  padding: 0.5rem 1rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.message-type-tab {
+  padding: 0.25rem 0.75rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+  color: #8b8fa3;
+  font-size: 0.85rem;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.message-type-tab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.message-type-tab.active {
+  color: #fff;
+  background-color: rgba(95, 121, 252, 0.2);
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;

@@ -80,6 +80,31 @@ const userTeamId = computed(() => {
   return currentPlayer ? currentPlayer.teamId : null
 })
 
+// 根据消息类型过滤消息
+const filteredMessages = computed(() => {
+  // 如果不是公共聊天，或者选择了显示所有消息，直接返回全部消息
+  if (activeChat.value !== 'public' || activeMessageType.value === 'all') {
+    return messages.value[activeChat.value] || [];
+  }
+
+  // 如果选择了只显示系统消息
+  if (activeMessageType.value === 'system') {
+    return (messages.value[activeChat.value] || []).filter(msg =>
+      msg.isSystem || msg.userId === 'system'
+    );
+  }
+
+  // 如果选择了只显示普通消息
+  if (activeMessageType.value === 'normal') {
+    return (messages.value[activeChat.value] || []).filter(msg =>
+      !msg.isSystem && msg.userId !== 'system'
+    );
+  }
+
+  // 默认返回全部消息
+  return messages.value[activeChat.value] || [];
+})
+
 // 用户是否在观众席
 const isSpectator = computed(() => {
   if (!roomData.value || !currentUserId.value) return true
@@ -128,6 +153,9 @@ const sidebarCollapsed = ref(false)
 
 // 当前激活的聊天标签
 const activeChat = ref('public')
+
+// 当前激活的消息类型标签
+const activeMessageType = ref('all') // 'all', 'normal', 'system'
 
 // 聊天消息
 const messages = ref({
@@ -930,7 +958,6 @@ const loadChatHistory = (chatHistory, clearExisting = true) => {
           teamId: message.teamId,
           channel: channel
         };
-        console.log('加载系统消息:', message.content);
       } else {
         // 普通用户消息
         formattedMessage = {
@@ -3003,6 +3030,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                     </div>
 
                     <div class="chat-tabs">
+                      <!-- 聊天频道选择 -->
                       <div
                         class="chat-tab"
                         :class="{'active': activeChat === 'public'}"
@@ -3028,11 +3056,36 @@ const refreshRoomDetail = async (autoJoin = false) => {
                       </div>
                     </div>
 
+                    <!-- 消息类型选择（仅在公共聊天中显示） -->
+                    <div v-if="activeChat === 'public'" class="message-type-tabs">
+                      <div
+                        class="message-type-tab"
+                        :class="{'active': activeMessageType === 'all'}"
+                        @click="activeMessageType = 'all'"
+                      >
+                        全部
+                      </div>
+                      <div
+                        class="message-type-tab"
+                        :class="{'active': activeMessageType === 'normal'}"
+                        @click="activeMessageType = 'normal'"
+                      >
+                        普通消息
+                      </div>
+                      <div
+                        class="message-type-tab"
+                        :class="{'active': activeMessageType === 'system'}"
+                        @click="activeMessageType = 'system'"
+                      >
+                        系统消息
+                      </div>
+                    </div>
+
                     <div class="chat-messages">
                       <div
-                        v-for="msg in messages[activeChat]"
+                        v-for="msg in filteredMessages"
                         :key="msg.id"
-                        :class="['message', {'system-message': msg.userId === 'system'}]"
+                        :class="['message', {'system-message': msg.isSystem || msg.userId === 'system'}]"
                       >
                         <template v-if="msg.userId !== 'system'">
                           <img :src="msg.avatar || getChampionIcon(20)" alt="头像" class="message-avatar">

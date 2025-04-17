@@ -21,6 +21,9 @@ export const useRoomStore = defineStore('room', () => {
     pageSize: 12
   })
 
+  // 记录进入房间前的路由
+  const previousRoute = ref(null)
+
   // 引入其他store
   const userStore = useUserStore()
 
@@ -508,53 +511,6 @@ export const useRoomStore = defineStore('room', () => {
       }
     } else {
      //addSystemMessage(`${userStore.username} 离开了语音聊天`)
-    }
-  }
-
-  // 添加系统消息
-  const addSystemMessage = (content) => {
-    if (!content || typeof content !== 'string') {
-      console.error('无法添加系统消息：内容无效', content)
-      return
-    }
-
-    try {
-      // 创建系统消息对象
-      const systemMessage = {
-        id: Date.now().toString(),
-        userId: 'system',
-        username: '系统',
-        content: content,
-        avatar: '', // 系统消息没有头像
-        type: 'system',
-        channel: 'public',
-        createTime: new Date().toISOString()
-      }
-
-      // 使用辅助函数格式化消息
-      const formattedMessage = formatChatMessage(systemMessage)
-
-      // 确保所有聊天频道都已初始化
-      if (!messages.value) {
-        messages.value = {
-          public: [],
-          team1: [],
-          team2: []
-        }
-      }
-
-      // 将消息添加到公共频道
-      messages.value.public.push(formattedMessage)
-
-      // 滚动到最新消息
-      nextTick(() => {
-        const chatContainer = document.querySelector('.chat-messages')
-        if (chatContainer) {
-          chatContainer.scrollTop = chatContainer.scrollHeight
-        }
-      })
-    } catch (error) {
-      console.error('添加系统消息失败:', error)
     }
   }
 
@@ -1328,6 +1284,7 @@ export const useRoomStore = defineStore('room', () => {
     loading,
     error,
     pagination,
+    previousRoute,
 
     // 状态 - 房间详情相关
     selectedCharacter,

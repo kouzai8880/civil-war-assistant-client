@@ -1467,6 +1467,36 @@ onMounted(async () => {
     return
   }
 
+  // 记录进入房间前的路由
+  // 如果是从房间列表页面进入，记录为 /rooms
+  // 如果是从首页进入，记录为 /
+  // 如果是从其他页面进入，记录为实际的路由
+  if (route.from && route.from.path) {
+    // 如果有from路由，使用from路由
+    roomStore.previousRoute = route.from.path;
+    console.log(`记录上一个路由（from）: ${route.from.path}`);
+  } else if (document.referrer) {
+    // 如果没有from路由，尝试使用referrer
+    try {
+      const referrerUrl = new URL(document.referrer);
+      const path = referrerUrl.pathname;
+      if (path && path !== route.path) {
+        roomStore.previousRoute = path;
+        console.log(`记录上一个路由（referrer）: ${path}`);
+      } else {
+        roomStore.previousRoute = '/rooms';
+        console.log('无法获取有效的referrer，默认设置为 /rooms');
+      }
+    } catch (e) {
+      roomStore.previousRoute = '/rooms';
+      console.log('解析referrer出错，默认设置为 /rooms');
+    }
+  } else {
+    // 如果都没有，默认设置为 /rooms
+    roomStore.previousRoute = '/rooms';
+    console.log('无法获取上一个路由，默认设置为 /rooms');
+  }
+
   isLoading.value = true
 
   try {
@@ -1736,8 +1766,10 @@ const leaveRoom = async () => {
       // 清除事件监听器
       cleanupRoomEventListeners()
 
-      // 跳转到房间列表页面
-      router.push('/rooms')
+      // 跳转到上一个路由
+      const previousRoute = roomStore.previousRoute || '/rooms';
+      console.log(`离开房间后跳转到上一个路由: ${previousRoute}`);
+      router.push(previousRoute);
 
       ElMessage.success('成功离开房间')
     } else {
@@ -1747,9 +1779,11 @@ const leaveRoom = async () => {
     console.error('离开房间时出错:', error)
     ElMessage.error(error.message || '离开房间失败，请重试')
 
-    // 即使出错，仍然尝试返回房间列表
+    // 即使出错，仍然尝试返回上一个路由
     setTimeout(() => {
-      router.push('/rooms')
+      const previousRoute = roomStore.previousRoute || '/rooms';
+      console.log(`出错后跳转到上一个路由: ${previousRoute}`);
+      router.push(previousRoute);
     }, 1000)
   } finally {
     isLoading.value = false
@@ -1896,62 +1930,6 @@ const sendMessage = () => {
   }
 }
 
-// 添加系统消息
-const addSystemMessage = (content) => {
-  if (!content || typeof content !== 'string') {
-    console.error('无法添加系统消息：内容无效', content)
-    return
-  }
-
-  try {
-    // 创建系统消息对象
-    const systemMessage = {
-      id: Date.now().toString(),
-      userId: 'system',
-      username: '系统',
-      content: content,
-      avatar: '', // 系统消息没有头像
-      type: 'system',
-      channel: 'public',
-      createTime: new Date().toISOString()
-    }
-
-    // 使用辅助函数格式化消息
-    const formattedMessage = formatChatMessage(systemMessage)
-
-    // 确保所有聊天频道都已初始化
-    if (!messages.value) {
-      messages.value = {
-        public: [],
-        team1: [],
-        team2: []
-      }
-    }
-
-    // 添加到所有聊天频道
-    Object.keys(messages.value).forEach(channel => {
-      if (!messages.value[channel]) {
-        messages.value[channel] = []
-      }
-      // 创建每个频道的副本，以防止引用问题
-      const channelMessage = { ...formattedMessage, channel }
-      messages.value[channel].push(channelMessage)
-    })
-
-    console.log(`系统消息: ${content}`)
-
-    // 自动滚动到底部
-    nextTick(() => {
-      const chatBox = document.querySelector('.chat-messages')
-      if (chatBox) {
-        chatBox.scrollTop = chatBox.scrollHeight
-      }
-    })
-  } catch (error) {
-    console.error('添加系统消息失败', error)
-  }
-}
-
 // 切换语音状态
 const toggleVoice = () => {
   hasJoinedVoice.value = !hasJoinedVoice.value
@@ -2032,15 +2010,6 @@ const formatDateTime = (dateTimeStr) => {
   }
 }
 
-// 队伍颜色
-const teamColor = (teamId) => {
-  if (!teamId) return ''
-  switch (teamId) {
-    case 1: return 'team-red'
-    case 2: return 'team-blue'
-    default: return ''
-  }
-}
 
 // 删除不再需要的canStartPicking计算属性
 

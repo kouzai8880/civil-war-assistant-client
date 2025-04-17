@@ -85,14 +85,11 @@ const filteredMessages = computed(() => {
   console.log('消息数量:', (messages.value[activeChat.value] || []).length);
   // 如果不是公共聊天，或者选择了显示所有消息，直接返回全部消息
   if (activeChat.value !== 'public' || activeMessageType.value === 'all') {
-    //打印日志
-    console.log('不是公共聊天，或者选择了显示所有消息，直接返回全部消息');
     return messages.value[activeChat.value] || [];
   }
 
   // 如果选择了只显示系统消息
   if (activeMessageType.value === 'system') {
-    console.log('选择了只显示系统消息');
     return (messages.value[activeChat.value] || []).filter(msg =>
       msg.isSystem || msg.userId === 'system'
     );
@@ -100,13 +97,10 @@ const filteredMessages = computed(() => {
 
   // 如果选择了只显示普通消息
   if (activeMessageType.value === 'normal') {
-    console.log('选择了只显示普通消息');
     return (messages.value[activeChat.value] || []).filter(msg =>
       !msg.isSystem && msg.userId !== 'system'
     );
   }
-  // 打印消息数量：
-  console.log('消息数量:', (messages.value[activeChat.value] || []).length);
   // 默认返回全部消息
   return messages.value[activeChat.value] || [];
 })
@@ -163,14 +157,8 @@ const activeChat = ref('public')
 // 当前激活的消息类型标签
 const activeMessageType = ref('all') // 'all', 'normal', 'system'
 
-// 聊天消息
-const messages = ref({
-  public: [
-    { id: 1, userId: 'system', username: '系统', content: '欢迎来到房间，请准备就绪', time: new Date() }
-  ],
-  team1: [],
-  team2: []
-})
+// 聊天消息 - 从 Store 获取
+const messages = computed(() => roomStore.messages)
 
 // 聊天输入
 const chatInput = ref('')
@@ -867,163 +855,21 @@ const loadChatHistory = (chatHistory, clearExisting = true) => {
 
   if (!chatHistory || !Array.isArray(chatHistory)) {
     console.log('没有历史聊天记录或格式不正确');
-    return;
-  }
-
-  if (chatHistory.length === 0) {
-    console.log('历史聊天记录为空');
-    // 即使没有消息，也确保消息容器已初始化
-    if (!messages.value) {
-      messages.value = {
-        public: [],
-        team1: [],
-        team2: []
-      };
-    }
-    return;
-  }
-
-  try {
-    console.log(`开始处理 ${chatHistory.length} 条历史消息`);
-
-    // 确保所有聊天频道都已初始化
-    if (!messages.value) {
-      messages.value = {
-        public: [],
-        team1: [],
-        team2: []
-      };
-    }
-
-    // 如果需要清空现有消息
-    if (clearExisting) {
-      Object.keys(messages.value).forEach(channel => {
-        messages.value[channel] = [];
-      });
-      console.log('已清空现有消息');
-    }
-
-    // 创建消息ID集合，用于检查重复消息
-    const existingMessageIds = {};
-    Object.keys(messages.value).forEach(channel => {
-      existingMessageIds[channel] = new Set(
-        messages.value[channel].map(msg => msg.id)
-      );
-    });
-
-    // 处理每条历史消息
-    let addedCount = 0;
-    let skippedCount = 0;
-
-    chatHistory.forEach((message, index) => {
-      // 验证消息格式
-      if (!message || typeof message !== 'object') {
-        console.warn(`跳过无效消息 #${index}:`, message);
-        skippedCount++;
-        return;
-      }
-
-      if (!message.content) {
-        console.warn(`跳过没有内容的消息 #${index}:`, message);
-        skippedCount++;
-        return;
-      }
-
-      // 判断消息类型和频道
-      let channel = 'public';
-      if (message.channel === 'team' && message.teamId) {
-        channel = `team${message.teamId}`;
-      }
-
-      // 确保该频道存在
-      if (!messages.value[channel]) {
-        messages.value[channel] = [];
-      }
-
-      // 检查消息是否已存在
-      const messageId = message.id || `${Date.now()}-${index}`;
-      if (existingMessageIds[channel] && existingMessageIds[channel].has(messageId)) {
-        console.log(`消息 ${messageId} 已存在，不重复添加`);
-        skippedCount++;
-        return;
-      }
-
-      // 构建消息对象
-      let formattedMessage;
-
-      // 如果是系统消息，使用简化的格式
-      if (message.type === 'system') {
-        formattedMessage = {
-          id: messageId,
-          userId: 'system',
-          username: '系统',
-          avatar: '',
-          content: message.content,
-          time: message.createTime ? new Date(message.createTime) : new Date(),
-          isSystem: true,
-          teamId: message.teamId,
-          channel: channel
-        };
-      } else {
-        // 普通用户消息
-        formattedMessage = {
-          id: messageId,
-          userId: message.userId,
-          username: message.username || '未知用户',
-          avatar: message.avatar || '',
-          content: message.content,
-          time: message.createTime ? new Date(message.createTime) : new Date(),
-          isSystem: false,
-          teamId: message.teamId,
-          channel: channel
-        };
-      }
-
-      // 如果是队伍消息，需要检查权限
-      if (channel.startsWith('team')) {
-        const teamId = parseInt(channel.replace('team', ''));
-        const isUserTeam = teamId === userTeamId.value;
-
-        // 如果是当前用户的队伍消息或者用户是观众但消息标记为可见
-        if (isUserTeam || (isSpectator.value && message.isTeamMessage)) {
-          messages.value[channel].push(formattedMessage);
-          // 添加到已存在消息ID集合
-          existingMessageIds[channel].add(messageId);
-          addedCount++;
-        } else {
-          skippedCount++;
-        }
-      } else {
-        // 公共消息直接添加
-        messages.value[channel].push(formattedMessage);
-        // 添加到已存在消息ID集合
-        existingMessageIds[channel].add(messageId);
-        addedCount++;
-      }
-    });
-
-    // 按时间排序消息
-    Object.keys(messages.value).forEach(channel => {
-      if (messages.value[channel].length > 0) {
-        messages.value[channel].sort((a, b) => a.time - b.time);
-      }
-    });
-
-    console.log(`历史聊天记录加载完成: 添加 ${addedCount} 条，跳过 ${skippedCount} 条`);
-
-    // 自动滚动到底部
-    nextTick(() => {
-      const chatBox = document.querySelector('.chat-messages');
-      if (chatBox) {
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-    });
-
-    return addedCount > 0; // 返回是否添加了新消息
-  } catch (error) {
-    console.error('加载历史聊天记录时出错:', error);
     return false;
   }
+
+  // 直接使用 roomStore 的 loadMessages 方法加载历史消息
+  const success = roomStore.loadMessages(chatHistory, clearExisting);
+
+  // 自动滚动到底部
+  nextTick(() => {
+    const chatBox = document.querySelector('.chat-messages');
+    if (chatBox) {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  });
+
+  return success; // 返回是否添加了新消息
 };
 
 // 各种事件处理函数
@@ -1254,85 +1100,8 @@ const handleNewMessage = (event) => {
     return;
   }
 
-  const message = event.detail;
-
-  // 确保所有聊天频道都已初始化
-  if (!messages.value) {
-    messages.value = {
-      public: [],
-      team1: [],
-      team2: []
-    }
-  }
-
-  // 判断消息类型和频道
-  let channel = 'public';
-  if (message.channel === 'team' && message.teamId) {
-    channel = `team${message.teamId}`;
-  }
-
-  // 确保该频道存在
-  if (!messages.value[channel]) {
-    messages.value[channel] = [];
-  }
-
-  // 检查消息是否已存在，避免重复添加
-  const messageExists = messages.value[channel].some(msg => msg.id === message.id);
-  if (messageExists) {
-    console.log(`消息 ${message.id} 已存在，不重复添加`);
-    return;
-  }
-
-  // 构建消息对象
-  let formattedMessage;
-
-  // 如果是系统消息，使用简化的格式
-  if (message.type === 'system') {
-    formattedMessage = {
-      id: message.id || Date.now().toString(),
-      userId: 'system',
-      username: '系统',
-      avatar: '',
-      content: message.content,
-      time: message.createTime ? new Date(message.createTime) : new Date(),
-      isSystem: true,
-      teamId: message.teamId,
-      channel: channel
-    };
-    console.log('收到系统消息:', message.content);
-  } else {
-    // 普通用户消息
-    formattedMessage = {
-      id: message.id || Date.now().toString(),
-      userId: message.userId,
-      username: message.username || '未知用户',
-      avatar: message.avatar || '',
-      content: message.content,
-      time: message.createTime ? new Date(message.createTime) : new Date(),
-      isSystem: false,
-      teamId: message.teamId,
-      channel: channel
-    };
-  }
-
-  // 如果是队伍消息，需要检查权限
-  if (channel.startsWith('team')) {
-    const teamId = parseInt(channel.replace('team', ''));
-    const isUserTeam = teamId === userTeamId.value;
-
-    // 如果是当前用户的队伍消息或者用户是观众但消息标记为可见
-    if (isUserTeam || (isSpectator.value && message.isTeamMessage)) {
-      messages.value[channel].push(formattedMessage);
-      console.log(`添加队伍${teamId}消息:`, formattedMessage);
-    }
-  } else {
-        // 或者方法2：使用push后强制更新
-    messages.value[channel].push(formattedMessage);
-    // 强制触发更新
-    messages.value = { ...messages.value };
-
-    console.log('添加公共消息:', formattedMessage);
-  }
+  // 直接使用 roomStore 的 addMessage 方法添加消息
+  roomStore.addMessage(event.detail);
 
   // 自动滚动到底部
   nextTick(() => {

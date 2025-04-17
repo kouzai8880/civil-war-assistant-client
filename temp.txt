@@ -1,0 +1,200 @@
+﻿<script setup>
+import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '../stores/user'
+import { useRoomStore } from '../stores/room'
+import { useSocketStore } from '../stores/socket'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
+
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+const roomStore = useRoomStore()
+const socketStore = useSocketStore()
+
+// 鎴块棿ID
+const roomId = computed(() => route.params.id)
+
+// 鎴块棿璇︽儏
+const room = computed(() => roomStore.currentRoom)
+
+// 澶勭悊宓屽鐨勬埧闂存暟鎹粨鏋?
+const roomData = computed(() => {
+  if (!room.value) return null
+  return room.value.room ? room.value.room : room.value
+})
+
+// 鐜╁鍒楄〃
+const players = computed(() => {
+  if (!roomData.value) return []
+  return roomData.value.players || []
+})
+
+// 瑙備紬鍒楄〃
+const spectators = computed(() => {
+  if (!roomData.value) return []
+  return roomData.value.spectators || []
+})
+
+// 褰撳墠鐢ㄦ埛ID
+const currentUserId = computed(() => userStore.userId)
+
+// 鐢ㄦ埛鏄惁宸插噯澶?
+const isReady = computed(() => {
+  if (!roomData.value || !currentUserId.value) return false
+
+  // 濡傛灉娌℃湁鐜╁鍒楄〃锛岃繑鍥瀎alse
+  if (!players.value || !Array.isArray(players.value)) return false
+
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
+  return currentPlayer && currentPlayer.status === 'ready'
+})
+
+// 鐢ㄦ埛鏄惁鏄埧涓?
+const isCreator = computed(() => {
+  if (!roomData.value || !currentUserId.value) return false
+
+  return roomData.value.creatorId === currentUserId.value
+})
+
+// 鐢ㄦ埛鏄惁鏄槦闀?
+const isCaptain = computed(() => {
+  if (!roomData.value || !currentUserId.value) return false
+
+  // 濡傛灉娌℃湁鐜╁鍒楄〃锛岃繑鍥瀎alse
+  if (!players.value || !Array.isArray(players.value)) return false
+
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
+  return currentPlayer && currentPlayer.isCaptain
+})
+
+// 鐢ㄦ埛鎵€鍦ㄩ槦浼岻D
+const userTeamId = computed(() => {
+  if (!roomData.value || !currentUserId.value) return null
+
+  // 濡傛灉娌℃湁鐜╁鍒楄〃锛岃繑鍥瀗ull
+  if (!players.value || !Array.isArray(players.value)) return null
+
+  const currentPlayer = players.value.find(p => p.userId === currentUserId.value)
+  return currentPlayer ? currentPlayer.teamId : null
+})
+
+// 鏍规嵁娑堟伅绫诲瀷杩囨护娑堟伅
+const filteredMessages = computed(() => {
+  console.log('娑堟伅鏁伴噺:', (messages.value[activeChat.value] || []).length);
+  // 濡傛灉涓嶆槸鍏叡鑱婂ぉ锛屾垨鑰呴€夋嫨浜嗘樉绀烘墍鏈夋秷鎭紝鐩存帴杩斿洖鍏ㄩ儴娑堟伅
+  if (activeChat.value !== 'public' || activeMessageType.value === 'all') {
+    //鎵撳嵃鏃ュ織
+    console.log('涓嶆槸鍏叡鑱婂ぉ锛屾垨鑰呴€夋嫨浜嗘樉绀烘墍鏈夋秷鎭紝鐩存帴杩斿洖鍏ㄩ儴娑堟伅');
+    return messages.value[activeChat.value] || [];
+  }
+
+  // 濡傛灉閫夋嫨浜嗗彧鏄剧ず绯荤粺娑堟伅
+  if (activeMessageType.value === 'system') {
+    console.log('閫夋嫨浜嗗彧鏄剧ず绯荤粺娑堟伅');
+    return (messages.value[activeChat.value] || []).filter(msg =>
+      msg.isSystem || msg.userId === 'system'
+    );
+  }
+
+  // 濡傛灉閫夋嫨浜嗗彧鏄剧ず鏅€氭秷鎭?
+  if (activeMessageType.value === 'normal') {
+    console.log('閫夋嫨浜嗗彧鏄剧ず鏅€氭秷鎭?);
+    return (messages.value[activeChat.value] || []).filter(msg =>
+      !msg.isSystem && msg.userId !== 'system'
+    );
+  }
+  // 鎵撳嵃娑堟伅鏁伴噺锛?
+  console.log('娑堟伅鏁伴噺:', (messages.value[activeChat.value] || []).length);
+  // 榛樿杩斿洖鍏ㄩ儴娑堟伅
+  return messages.value[activeChat.value] || [];
+})
+
+// 鐢ㄦ埛鏄惁鍦ㄨ浼楀腑
+const isSpectator = computed(() => {
+  if (!roomData.value || !currentUserId.value) return true
+
+  // 濡傛灉娌℃湁鐜╁鍒楄〃锛岄粯璁や负瑙備紬
+  if (!players.value || !Array.isArray(players.value)) return true
+
+  // 妫€鏌ョ敤鎴锋槸鍚﹀湪鐜╁鍒楄〃涓?
+  return !players.value.some(p => p.userId === currentUserId.value)
+})
+
+// 闃熶紞鏄惁宸叉弧
+const isTeamFull = computed(() => {
+  if (!roomData.value) return true
+
+  // 濡傛灉娌℃湁鐜╁鍒楄〃锛岃繑鍥瀟rue
+  if (!players.value || !Array.isArray(players.value)) return true
+
+  return players.value.length >= roomData.value.playerCount
+})
+
+// 褰撳墠閫変汉闃舵
+const pickingPhase = ref({
+  currentPick: 1,
+  currentTeam: 1,
+  pickPattern: [1, 2, 2, 2, 1] // 榛樿浣跨敤12221妯″紡
+})
+
+// 鍔犺浇鐘舵€?
+const isLoading = ref(false)
+
+// 宸茬Щ闄ら€夋嫨瑙掕壊寮圭獥
+// const characterPickingVisible = ref(false)
+
+// 閫夋嫨杈瑰脊绐?
+const sideSelectorVisible = ref(false)
+
+// 褰撳墠閫夋嫨鐨勮鑹?
+const selectedCharacter = ref(null)
+
+// 褰撳墠閫夋嫨鐨勮竟
+const selectedSide = ref(null)
+
+// 渚ц竟鏍忕姸鎬?
+const sidebarCollapsed = ref(false)
+
+// 褰撳墠婵€娲荤殑鑱婂ぉ鏍囩
+const activeChat = ref('public')
+
+// 褰撳墠婵€娲荤殑娑堟伅绫诲瀷鏍囩
+const activeMessageType = ref('all') // 'all', 'normal', 'system'
+
+// 鑱婂ぉ娑堟伅 - 浠?Store 鑾峰彇
+const messages = computed(() => roomStore.messages)
+  public: [
+    { id: 1, userId: 'system', username: '绯荤粺', content: '娆㈣繋鏉ュ埌鎴块棿锛岃鍑嗗灏辩华', time: new Date() }
+  ],
+  team1: [],
+  team2: []
+})
+
+// 鑱婂ぉ杈撳叆
+const chatInput = ref('')
+
+// 闃熶紞璁剧疆瀵硅瘽妗?
+const teamSettingVisible = ref(false)
+
+// 鏄惁宸插姞鍏ヨ闊?
+const hasJoinedVoice = ref(false)
+
+// 甯哥敤鐨勮嫳闆勫ご鍍忓垪琛紝鐢ㄤ簬闅忔満鍒嗛厤缁欑帺瀹?
+const championIcons = [
+  'Ahri', 'Annie', 'Ashe', 'Caitlyn', 'Darius',
+  'Ezreal', 'Garen', 'Jinx', 'Lux', 'Malphite',
+  'Nami', 'Syndra', 'Thresh', 'Yasuo', 'Zed',
+  'Akali', 'Ekko', 'Fiora', 'Irelia', 'Jhin',
+  'Kaisa', 'LeeSin', 'Lulu', 'MasterYi', 'Pyke',
+  'Riven', 'Sett', 'Vayne', 'Yone', 'Yuumi'
+]
+
+// 鐢熸垚鑻遍泟澶村儚URL
+const getChampionIcon = (index) => {
+  const champion = championIcons[index % championIcons.length]
+  return `https://ddragon.leagueoflegends.com/cdn/13.12.1/img/champion/${champion}.png`
+}
+
+// 宸查€夋嫨鐨勭帺瀹?

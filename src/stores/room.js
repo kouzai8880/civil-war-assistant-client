@@ -481,15 +481,15 @@ export const useRoomStore = defineStore('room', () => {
     if (hasJoinedVoice.value) {
       // 如果已经加入语音，则先退出
       hasJoinedVoice.value = false
-      addSystemMessage(`${userStore.username} 离开了语音聊天`)
+     //addSystemMessage(`${userStore.username} 离开了语音聊天`)
 
       // 然后重新加入新的队伍语音
       setTimeout(() => {
         hasJoinedVoice.value = true
         if (teamId === 0) {
-          addSystemMessage(`${userStore.username} 加入了公共语音聊天`)
+         //addSystemMessage(`${userStore.username} 加入了公共语音聊天`)
         } else {
-          addSystemMessage(`${userStore.username} 加入了${teamId === 1 ? '一' : '二'}队语音聊天`)
+         //addSystemMessage(`${userStore.username} 加入了${teamId === 1 ? '一' : '二'}队语音聊天`)
         }
       }, 500)
     }
@@ -502,12 +502,12 @@ export const useRoomStore = defineStore('room', () => {
     // 添加系统消息
     if (hasJoinedVoice.value) {
       if (roomData.value.status === 'waiting') {
-        addSystemMessage(`${userStore.username} 加入了语音聊天`)
+       //addSystemMessage(`${userStore.username} 加入了语音聊天`)
       } else {
-        addSystemMessage(`${userStore.username} 加入了${activeVoiceTeam.value === 1 ? '一' : '二'}队语音聊天`)
+       //addSystemMessage(`${userStore.username} 加入了${activeVoiceTeam.value === 1 ? '一' : '二'}队语音聊天`)
       }
     } else {
-      addSystemMessage(`${userStore.username} 离开了语音聊天`)
+     //addSystemMessage(`${userStore.username} 离开了语音聊天`)
     }
   }
 
@@ -1392,7 +1392,7 @@ export const useRoomStore = defineStore('room', () => {
     switchChatChannel,
     switchVoiceTeam,
     toggleVoice,
-    addSystemMessage,
+   //addSystemMessage,
     formatChatMessage,
     formatDateTime,
     teamColor

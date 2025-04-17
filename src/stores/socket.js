@@ -547,10 +547,40 @@ export const useSocketStore = defineStore('socket', () => {
     })
 
     // 语音相关事件
-    on('voiceStateUpdate', (data) => {
-      console.log('[WebSocket] 语音状态更新:', data)
+    on('voiceChannelJoined', (response) => {
+      console.log('[WebSocket] 加入语音房间成功:', response)
       // 将事件分发给其他组件
-      window.dispatchEvent(new CustomEvent('voiceStateUpdate', { detail: data }))
+      window.dispatchEvent(new CustomEvent('voiceChannelJoined', { detail: response }))
+    })
+
+    on('voiceChannelLeft', (response) => {
+      console.log('[WebSocket] 离开语音房间成功:', response)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('voiceChannelLeft', { detail: response }))
+    })
+
+    on('voiceChannelUsers', (data) => {
+      console.log('[WebSocket] 语音房间用户列表:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('voiceChannelUsers', { detail: data }))
+    })
+
+    on('userJoinedVoiceChannel', (data) => {
+      console.log('[WebSocket] 用户加入语音房间:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('userJoinedVoiceChannel', { detail: data }))
+    })
+
+    on('userLeftVoiceChannel', (data) => {
+      console.log('[WebSocket] 用户离开语音房间:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('userLeftVoiceChannel', { detail: data }))
+    })
+
+    on('voiceMuteUpdate', (data) => {
+      console.log('[WebSocket] 语音静音状态更新:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('voiceMuteUpdate', { detail: data }))
     })
 
     on('voiceData', (data) => {
@@ -715,6 +745,10 @@ export const useSocketStore = defineStore('socket', () => {
 
   // 获取房间详情
   const getRoomDetail = (roomId, callback) => {
+
+    //打印堆栈
+    console.log('调用堆栈:', new Error().stack);
+
     if (!connected.value) {
       error.value = 'WebSocket未连接，无法获取房间详情'
       if (callback) {

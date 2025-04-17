@@ -5,7 +5,7 @@ import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useSocketStore } from '../stores/socket'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, Mic, MuteNotification, ChatDotRound, ChatLineRound } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -166,8 +166,7 @@ const chatInput = ref('')
 // 队伍设置对话框
 const teamSettingVisible = ref(false)
 
-// 是否已加入语音
-const hasJoinedVoice = ref(false)
+// 语音相关状态已移至 roomStore
 
 // 常用的英雄头像列表，用于随机分配给玩家
 const championIcons = [
@@ -723,6 +722,15 @@ const setupRoomEventListeners = () => {
   window.addEventListener('socketError', handleSocketError)
   window.addEventListener('socketReconnected', handleSocketReconnected)
 
+  // 添加语音通信相关的事件监听器
+  window.addEventListener('voiceChannelJoined', handleVoiceChannelJoined)
+  window.addEventListener('voiceChannelLeft', handleVoiceChannelLeft)
+  window.addEventListener('voiceChannelUsers', handleVoiceChannelUsers)
+  window.addEventListener('userJoinedVoiceChannel', handleUserJoinedVoiceChannel)
+  window.addEventListener('userLeftVoiceChannel', handleUserLeftVoiceChannel)
+  window.addEventListener('voiceMuteUpdate', handleVoiceMuteUpdate)
+  window.addEventListener('voiceData', handleVoiceData)
+
   // 添加选人选边相关的事件监听器
   // 使用自定义事件监听器
   window.addEventListener('playerSelected', handlePlayerSelectedEvent)
@@ -786,6 +794,15 @@ const cleanupRoomEventListeners = () => {
   window.removeEventListener('newMessage', handleNewMessage)
   window.removeEventListener('socketError', handleSocketError)
   window.removeEventListener('socketReconnected', handleSocketReconnected)
+
+  // 移除语音通信相关的事件监听器
+  window.removeEventListener('voiceChannelJoined', handleVoiceChannelJoined)
+  window.removeEventListener('voiceChannelLeft', handleVoiceChannelLeft)
+  window.removeEventListener('voiceChannelUsers', handleVoiceChannelUsers)
+  window.removeEventListener('userJoinedVoiceChannel', handleUserJoinedVoiceChannel)
+  window.removeEventListener('userLeftVoiceChannel', handleUserLeftVoiceChannel)
+  window.removeEventListener('voiceMuteUpdate', handleVoiceMuteUpdate)
+  window.removeEventListener('voiceData', handleVoiceData)
 
   // 移除选人选边相关的事件监听器
   // 使用与添加时相同的函数引用
@@ -852,6 +869,10 @@ const formatChatMessage = (message) => {
 // 加载历史聊天记录
 const loadChatHistory = (chatHistory, clearExisting = true) => {
   console.log(`加载历史聊天记录，${clearExisting ? '清空现有消息' : '保留现有消息'}`);
+
+  if (chatHistory.length < 0) {
+    return false;
+  }
 
   if (!chatHistory || !Array.isArray(chatHistory)) {
     console.log('没有历史聊天记录或格式不正确');
@@ -959,7 +980,12 @@ const handleRoleChanged = (event) => {
     if (changedUserId !== userStore.userId) {
       ElMessage.success(event.detail.message || '角色已变更')
     }
-    refreshRoomDetail(false)
+
+    // 直接使用事件返回的房间数据更新房间状态，而不是调用 refreshRoomDetail 函数
+    if (event.detail.data?.room) {
+      roomStore.setCurrentRoom(event.detail.data.room)
+      room.value = event.detail.data.room
+    }
   }
 }
 
@@ -1038,24 +1064,16 @@ const handlePlayerLeft = (event) => {
 
 const handleSpectatorMoveToPlayer = (event) => {
   console.log('收到spectatorMoveToPlayer事件:', event.detail)
-  if (event.detail && event.detail.userId) {
-    // 只添加系统消息，不显示提示，因为在操作函数中已经显示了
-    if (event.detail.userId !== userStore.userId) {
-     //addSystemMessage(`${event.detail.username || '观众'} 加入了玩家列表`)
-    }
-    refreshRoomDetail(false)
-  }
+  room.value = roomStore.roomData;
+  //打印room.value
+  console.log('room.value:', room.value);
 }
 
 const handlePlayerMoveToSpectator = (event) => {
   console.log('收到playerMoveToSpectator事件:', event.detail)
-  if (event.detail && event.detail.userId) {
-    // 只添加系统消息，不显示提示，因为在操作函数中已经显示了
-    if (event.detail.userId !== userStore.userId) {
-     //addSystemMessage(`${event.detail.username || '玩家'} 移动到了观众席`)
-    }
-    refreshRoomDetail(false)
-  }
+  room.value = roomStore.roomData;
+  //打印room.value
+  console.log('room.value:', room.value);
 }
 
 const handleGameStarted = (event) => {
@@ -1146,6 +1164,72 @@ const handleSocketReconnected = (event) => {
 
     // 刷新房间数据，但不自动加入房间
     refreshRoomDetail(false)
+  }
+}
+
+// 语音通信相关的事件处理函数
+const handleVoiceChannelJoined = (event) => {
+  console.log('收到voiceChannelJoined事件:', event.detail)
+
+  if (event.detail && event.detail.status === 'success') {
+    // 更新当前语音房间
+    const channel = event.detail.data?.channel
+    if (channel) {
+      ElMessage.success(`成功加入${channel === 'public' ? '公共' : (channel === 'team1' ? '一队' : '二队')}语音房间`)
+    }
+  }
+}
+
+const handleVoiceChannelLeft = (event) => {
+  console.log('收到voiceChannelLeft事件:', event.detail)
+
+  if (event.detail && event.detail.status === 'success') {
+    ElMessage.success('已离开语音房间')
+  }
+}
+
+const handleVoiceChannelUsers = (event) => {
+  console.log('收到voiceChannelUsers事件:', event.detail)
+
+  if (event.detail && event.detail.channel && Array.isArray(event.detail.users)) {
+    // 更新语音房间用户列表
+    roomStore.updateVoiceChannelUsers(event.detail.channel, event.detail.users)
+  }
+}
+
+const handleUserJoinedVoiceChannel = (event) => {
+  console.log('收到userJoinedVoiceChannel事件:', event.detail)
+
+  if (event.detail && event.detail.userId && event.detail.channel) {
+    // 添加用户到语音房间
+    roomStore.addUserToVoiceChannel(event.detail)
+  }
+}
+
+const handleUserLeftVoiceChannel = (event) => {
+  console.log('收到userLeftVoiceChannel事件:', event.detail)
+
+  if (event.detail && event.detail.userId && event.detail.previousChannel) {
+    // 从语音房间移除用户
+    roomStore.removeUserFromVoiceChannel(event.detail)
+  }
+}
+
+const handleVoiceMuteUpdate = (event) => {
+  console.log('收到voiceMuteUpdate事件:', event.detail)
+
+  if (event.detail && event.detail.userId && event.detail.channel) {
+    // 更新用户的静音状态
+    roomStore.updateUserMuteStatus(event.detail.userId, event.detail.isMuted, event.detail.channel)
+  }
+}
+
+const handleVoiceData = (event) => {
+  // 不输出日志，避免刷屏
+
+  // 如果有语音实例，则处理语音数据
+  if (roomStore.voiceInstance && event.detail) {
+    roomStore.voiceInstance.handleVoiceData(event.detail)
   }
 }
 
@@ -1409,6 +1493,11 @@ const setupRefreshInterval = () => {
 onUnmounted(() => {
   console.log('组件卸载，但不清除事件监听器，确保玩家在房间外也能收到更新')
   // 不调用 cleanupRoomEventListeners()
+
+  // 清理语音资源
+  if (roomStore.hasJoinedVoice) {
+    roomStore.cleanupVoice()
+  }
 })
 
 // 将用户添加到观众席
@@ -1435,10 +1524,10 @@ const addUserToSpectators = async () => {
       // ElMessage.success('正在进入观众席...')
 
       // 等待WebSocket事件处理
-      await new Promise(resolve => setTimeout(resolve, 500))
+      //await new Promise(resolve => setTimeout(resolve, 500))
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail(false)
+      //await refreshRoomDetail(false)
 
       // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
@@ -1482,7 +1571,7 @@ const joinRoom = async () => {
       // ElMessage.success('正在加入对局...')
 
       // 重新加载房间数据以获取最新状态
-      await refreshRoomDetail(false)
+      //await refreshRoomDetail(false)
 
       // 不再显示第二次成功提示，因为事件处理中会显示
     } else {
@@ -1773,19 +1862,45 @@ const sendMessage = () => {
 }
 
 // 切换语音状态
-const toggleVoice = () => {
-  hasJoinedVoice.value = !hasJoinedVoice.value
-
-  // 添加系统消息
-  if (hasJoinedVoice.value) {
-    if (room.value.status === 'waiting') {
-     //addSystemMessage(`${userStore.username} 加入了语音聊天`)
-    } else {
-     //addSystemMessage(`${userStore.username} 加入了${activeVoiceTeam.value === 1 ? '一' : '二'}队语音聊天`)
-    }
-  } else {
-   //addSystemMessage(`${userStore.username} 离开了语音聊天`)
+const toggleVoice = async () => {
+  if (!roomData.value || !roomData.value.id) {
+    console.error('无法切换语音状态：房间数据不存在')
+    return
   }
+
+  try {
+    // 如果已经加入语音，则离开
+    if (roomStore.hasJoinedVoice) {
+      roomStore.leaveVoiceChannel()
+    } else {
+      // 否则加入语音
+      // 初始化语音通信
+      await roomStore.initVoiceCommunication()
+
+      // 根据当前状态决定加入哪个语音房间
+      let channel = 'public'
+      if (roomData.value.status !== 'waiting' && roomStore.userTeamId) {
+        channel = roomStore.userTeamId === 1 ? 'team1' : 'team2'
+      }
+
+      // 加入语音房间
+      roomStore.joinVoiceChannel(channel)
+    }
+  } catch (error) {
+    console.error('切换语音状态失败:', error)
+    ElMessage.error('切换语音状态失败')
+  }
+}
+
+// 切换静音状态
+const toggleMute = () => {
+  if (!roomData.value || !roomData.value.id || !roomStore.hasJoinedVoice) {
+    console.error('无法切换静音状态：未加入语音房间')
+    return
+  }
+
+  // 切换静音状态
+  roomStore.toggleMute()
 }
 
 // 切换侧边栏状态 - 已移除
@@ -1796,6 +1911,23 @@ const toggleVoice = () => {
 // 切换聊天频道
 const switchChatChannel = (channel) => {
   activeChat.value = channel
+}
+
+// 切换语音频道
+const switchVoiceChannel = (channel) => {
+  if (!roomData.value || !roomData.value.id) {
+    console.error('无法切换语音频道：房间数据不存在')
+    return
+  }
+
+  // 如果当前未加入语音，先加入语音
+  if (!roomStore.hasJoinedVoice) {
+    toggleVoice()
+    return
+  }
+
+  // 切换语音频道
+  roomStore.switchVoiceChannel(channel)
 }
 
 // 房间状态文本
@@ -1893,50 +2025,14 @@ const captainActionText = computed(() => {
   return ''
 })
 
-// 当前活跃的语音队伍
-const activeVoiceTeam = ref(0) // 0表示公共，1表示一队，2表示二队
-
-// 各队伍的语音参与者
-const teamVoiceParticipants = computed(() => {
-  if (!room.value || !hasJoinedVoice.value) return []
-
-  // 根据当前选择的队伍语音频道过滤玩家
-  if (activeVoiceTeam.value === 0 || room.value.status === 'waiting') {
-    return room.value.players.filter(p => p.userId !== currentUserId.value && p.hasJoinedVoice)
-  } else {
-    return room.value.players.filter(p =>
-      p.userId !== currentUserId.value &&
-      p.hasJoinedVoice &&
-      p.teamId === activeVoiceTeam.value
-    )
-  }
-})
-
-// 切换语音队伍
-const switchVoiceTeam = (teamId) => {
-  activeVoiceTeam.value = teamId
-
-  if (hasJoinedVoice.value) {
-    // 如果已经加入语音，则先退出
-    hasJoinedVoice.value = false
-   //addSystemMessage(`${userStore.username} 离开了语音聊天`)
-
-    // 然后重新加入新的队伍语音
-    setTimeout(() => {
-      hasJoinedVoice.value = true
-      if (teamId === 0) {
-       //addSystemMessage(`${userStore.username} 加入了公共语音聊天`)
-      } else {
-       //addSystemMessage(`${userStore.username} 加入了${teamId === 1 ? '一' : '二'}队语音聊天`)
-      }
-    }, 500)
-  }
-}
-
 // 监听用户队伍变化，自动切换到对应队伍的语音
 watch(userTeamId, (newTeamId) => {
   if (newTeamId && room.value && room.value.status !== 'waiting') {
-    activeVoiceTeam.value = newTeamId
+    // 切换到对应队伍的语音频道
+    const channel = newTeamId === 1 ? 'team1' : 'team2'
+    if (roomStore.hasJoinedVoice) {
+      roomStore.switchVoiceChannel(channel)
+    }
   }
 })
 
@@ -1944,10 +2040,15 @@ watch(userTeamId, (newTeamId) => {
 watch(() => room.value?.status, (newStatus) => {
   if (newStatus === 'waiting') {
     // 房间状态为等待中，切换到公共语音
-    activeVoiceTeam.value = 0
+    if (roomStore.hasJoinedVoice) {
+      roomStore.switchVoiceChannel('public')
+    }
   } else if (userTeamId.value) {
     // 房间状态变为选人阶段或之后，且用户已经有队伍
-    activeVoiceTeam.value = userTeamId.value
+    const channel = userTeamId.value === 1 ? 'team1' : 'team2'
+    if (roomStore.hasJoinedVoice) {
+      roomStore.switchVoiceChannel(channel)
+    }
   }
 
   // 如果状态是选人阶段，初始化已选择玩家列表
@@ -1955,6 +2056,8 @@ watch(() => room.value?.status, (newStatus) => {
     initializePickedCharacters()
   }
 })
+
+
 
 // 监听玩家列表变化
 watch(() => players.value, (newPlayers, oldPlayers) => {
@@ -1988,6 +2091,8 @@ watch(() => route.params.id, (newId, oldId) => {
 // 刷新房间详情
 // autoJoin参数控制是否自动加入房间，默认为false避免循环调用
 const refreshRoomDetail = async (autoJoin = false) => {
+  //打印堆栈
+  // console.log('调用堆栈:', new Error().stack);
   if (!roomId.value) {
     console.error('无法加载房间：没有房间ID')
     ElMessage.error('无法加载房间：没有房间ID')
@@ -2014,28 +2119,16 @@ const refreshRoomDetail = async (autoJoin = false) => {
         if (response.status === 'success') {
 
           // 处理房间数据
-          const roomData = response.data
+          const respRoomData = response.data
 
           console.log('收到getRoomDetail响应:', response);
 
-          // 确保关键属性总是有值，防止前端报错
-          roomData.players = roomData.players || []
-          roomData.teams = roomData.teams || []
-          roomData.spectators = roomData.spectators || []
-          roomData.messages = roomData.messages || []
-
-          // 检查是否有消息数据
-          if (roomData.messages && roomData.messages.length > 0) {
-            console.log(`收到 ${roomData.messages.length} 条消息，准备加载...`);
-            // 加载消息到聊天记录
-            loadChatHistory(roomData.messages, true);
-          } else {
-            console.log('没有收到消息数据');
-          }
+          // 加载消息到聊天记录
+          loadChatHistory(respRoomData.messages, true);
 
           // 更新当前房间数据
-          roomStore.setCurrentRoom(roomData)
-          room.value = roomData;
+          roomStore.setCurrentRoom(respRoomData)
+          room.value = respRoomData;
 
           resolve(roomData)
         } else {
@@ -2282,17 +2375,22 @@ const refreshRoomDetail = async (autoJoin = false) => {
               <div class="voice-container">
                 <div class="card-header">
                   <h2 class="section-title">
-                    {{ room.status === 'waiting' || activeVoiceTeam === 0 ? '公共语音' :
-                       activeVoiceTeam === 1 ? '一队语音' : '二队语音' }}
+                    {{ roomStore.currentVoiceChannel === 'public' ? '公共语音' :
+                       roomStore.currentVoiceChannel === 'team1' ? '一队语音' : '二队语音' }}
                   </h2>
                   <div class="voice-controls">
                     <button
                       class="btn-mic"
-                      :class="{'active': hasJoinedVoice}"
+                      :class="{
+                        'active': roomStore.hasJoinedVoice,
+                        'muted': roomStore.isMuted
+                      }"
+                      @click="toggleMute"
                     >
-                      🎤
+                      <i class="el-icon">
+                        <component :is="roomStore.isMuted ? 'MuteNotification' : 'Mic'"></component>
+                      </i>
                     </button>
-                    <button class="btn-speaker active">🔊</button>
                   </div>
                 </div>
 
@@ -2300,46 +2398,61 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <div v-if="room.status !== 'waiting'" class="team-voice-tabs">
                   <div
                     class="team-voice-tab"
-                    :class="{'active': activeVoiceTeam === 0}"
-                    @click="switchVoiceTeam(0)"
+                    :class="{'active': roomStore.currentVoiceChannel === 'public'}"
+                    @click="switchVoiceChannel('public')"
                   >
                     公共语音
                   </div>
                   <div
+                    v-if="userTeamId === 1 || isCreator"
                     class="team-voice-tab"
-                    :class="{'active': activeVoiceTeam === 1}"
-                    @click="switchVoiceTeam(1)"
+                    :class="{'active': roomStore.currentVoiceChannel === 'team1'}"
+                    @click="switchVoiceChannel('team1')"
                   >
                     一队语音
                   </div>
                   <div
+                    v-if="userTeamId === 2 || isCreator"
                     class="team-voice-tab"
-                    :class="{'active': activeVoiceTeam === 2}"
-                    @click="switchVoiceTeam(2)"
+                    :class="{'active': roomStore.currentVoiceChannel === 'team2'}"
+                    @click="switchVoiceChannel('team2')"
                   >
                     二队语音
                   </div>
                 </div>
 
                 <div class="voice-participants">
-                  <div class="voice-participant" :class="{'speaking': hasJoinedVoice}">
+                  <!-- 当前用户 -->
+                  <div class="voice-participant" :class="{'speaking': roomStore.hasJoinedVoice}">
                     <img :src="userStore.avatar || getChampionIcon(8)" alt="您的头像" class="voice-avatar">
                     <span class="participant-name">{{ userStore.username }} (您)</span>
                     <div class="voice-indicator"></div>
+                    <i v-if="roomStore.isMuted" class="el-icon voice-muted-icon">
+                      <MuteNotification />
+                    </i>
                   </div>
-                  <div v-for="participant in teamVoiceParticipants" :key="participant.userId" class="voice-participant speaking">
-                    <img :src="participant.avatar" :alt="participant.username" class="voice-avatar">
-                    <span class="participant-name">{{ participant.username }}</span>
+
+                  <!-- 其他语音参与者 -->
+                  <div
+                    v-for="user in roomStore.currentVoiceUsers"
+                    :key="user.userId"
+                    class="voice-participant speaking"
+                  >
+                    <img :src="user.avatar || getChampionIcon(10)" :alt="user.username" class="voice-avatar">
+                    <span class="participant-name">{{ user.username }}</span>
                     <div class="voice-indicator"></div>
+                    <i v-if="user.isMuted" class="el-icon voice-muted-icon">
+                      <MuteNotification />
+                    </i>
                   </div>
                 </div>
 
                 <button
                   class="btn join-voice-btn"
-                  :class="hasJoinedVoice ? 'btn-danger' : 'btn-primary'"
+                  :class="roomStore.hasJoinedVoice ? 'btn-danger' : 'btn-primary'"
                   @click="toggleVoice"
                 >
-                  {{ hasJoinedVoice ? '退出语音' : '加入语音' }}
+                  {{ roomStore.hasJoinedVoice ? '退出语音' : '加入语音' }}
                 </button>
               </div>
             </div>
@@ -2878,6 +2991,8 @@ const refreshRoomDetail = async (autoJoin = false) => {
                         </template>
                       </div>
                     </div>
+
+                    <!-- 语音通信控制按钮已移至语音区域组件 -->
 
                     <!-- 聊天输入框部分 -->
                     <div class="chat-input">

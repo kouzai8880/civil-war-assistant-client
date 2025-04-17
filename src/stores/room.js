@@ -55,8 +55,18 @@ export const useRoomStore = defineStore('room', () => {
   // 队伍设置对话框
   const teamSettingVisible = ref(false)
 
-  // 是否已加入语音
+  // 语音通信相关状态
   const hasJoinedVoice = ref(false)
+  const isMuted = ref(false)
+  const voiceInstance = ref(null)
+  const currentVoiceChannel = ref('none') // 'none', 'public', 'team1', 'team2'
+
+  // 语音房间用户列表
+  const voiceChannels = ref({
+    public: [],
+    team1: [],
+    team2: []
+  })
 
   // 当前选人阶段
   const pickingPhase = ref({
@@ -281,20 +291,15 @@ export const useRoomStore = defineStore('room', () => {
     return ''
   })
 
-  // 各队伍的语音参与者
-  const teamVoiceParticipants = computed(() => {
-    if (!roomData.value || !hasJoinedVoice.value) return []
+  // 当前语音房间的用户列表
+  const currentVoiceUsers = computed(() => {
+    if (currentVoiceChannel.value === 'none') return []
+    return voiceChannels.value[currentVoiceChannel.value] || []
+  })
 
-    // 根据当前选择的队伍语音频道过滤玩家
-    if (activeVoiceTeam.value === 0 || roomData.value.status === 'waiting') {
-      return roomData.value.players.filter(p => p.userId !== currentUserId.value && p.hasJoinedVoice)
-    } else {
-      return roomData.value.players.filter(p =>
-        p.userId !== currentUserId.value &&
-        p.hasJoinedVoice &&
-        p.teamId === activeVoiceTeam.value
-      )
-    }
+  // 各队伍的语音参与者 (兼容旧版代码)
+  const teamVoiceParticipants = computed(() => {
+    return currentVoiceUsers.value
   })
 
   // 函数 - 房间详情相关
@@ -477,25 +482,193 @@ export const useRoomStore = defineStore('room', () => {
     activeChat.value = channel
   }
 
-  // 切换语音队伍
-  const switchVoiceTeam = (teamId) => {
-    activeVoiceTeam.value = teamId
+  // 切换语音房间
+  const switchVoiceChannel = (channel) => {
+    // 如果已经在该房间，不需要切换
+    if (currentVoiceChannel.value === channel) return
 
-    if (hasJoinedVoice.value) {
-      // 如果已经加入语音，则先退出
-      hasJoinedVoice.value = false
-     //addSystemMessage(`${userStore.username} 离开了语音聊天`)
-
-      // 然后重新加入新的队伍语音
-      setTimeout(() => {
-        hasJoinedVoice.value = true
-        if (teamId === 0) {
-         //addSystemMessage(`${userStore.username} 加入了公共语音聊天`)
-        } else {
-         //addSystemMessage(`${userStore.username} 加入了${teamId === 1 ? '一' : '二'}队语音聊天`)
-        }
-      }, 500)
+    // 如果已经在其他语音房间，先离开
+    if (currentVoiceChannel.value !== 'none') {
+      leaveVoiceChannel()
     }
+
+    // 加入新的语音房间
+    if (channel !== 'none') {
+      joinVoiceChannel(channel)
+    }
+  }
+
+  // 切换语音队伍 (兼容旧版代码)
+  const switchVoiceTeam = (teamId) => {
+    // 将队伍 ID 转换为语音房间名称
+    let channel = 'public'
+    if (teamId === 1) channel = 'team1'
+    else if (teamId === 2) channel = 'team2'
+
+    // 调用新的切换语音房间方法
+    switchVoiceChannel(channel)
+  }
+
+  // 加入语音房间
+  const joinVoiceChannel = (channel) => {
+    if (!roomData.value || !roomData.value.id) {
+      console.error('无法加入语音房间：房间数据不存在')
+      return
+    }
+
+    const socketStore = useSocketStore()
+    if (!socketStore.isConnected) {
+      console.error('无法加入语音房间：WebSocket 未连接')
+      return
+    }
+
+    // 发送加入语音房间的请求
+    socketStore.getSocket().emit('joinVoiceChannel', {
+      roomId: roomData.value.id,
+      channel: channel
+    })
+
+    // 更新状态
+    hasJoinedVoice.value = true
+    currentVoiceChannel.value = channel
+  }
+
+  // 离开语音房间
+  const leaveVoiceChannel = () => {
+    if (!roomData.value || !roomData.value.id || currentVoiceChannel.value === 'none') {
+      return
+    }
+
+    const socketStore = useSocketStore()
+    if (!socketStore.isConnected) {
+      console.error('无法离开语音房间：WebSocket 未连接')
+      return
+    }
+
+    // 发送离开语音房间的请求
+    socketStore.getSocket().emit('leaveVoiceChannel', {
+      roomId: roomData.value.id
+    })
+
+    // 更新状态
+    hasJoinedVoice.value = false
+    currentVoiceChannel.value = 'none'
+
+    // 清理语音资源
+    if (voiceInstance.value) {
+      voiceInstance.value.dispose()
+      voiceInstance.value = null
+    }
+  }
+
+  // 切换静音状态
+  const toggleMute = () => {
+    if (!roomData.value || !roomData.value.id || currentVoiceChannel.value === 'none') {
+      console.error('无法切换静音状态：未加入语音房间')
+      return
+    }
+
+    // 更新本地状态
+    isMuted.value = !isMuted.value
+
+    // 更新语音实例的静音状态
+    if (voiceInstance.value) {
+      voiceInstance.value.setMuted(isMuted.value)
+    }
+
+    // 发送静音状态更新请求
+    const socketStore = useSocketStore()
+    socketStore.getSocket().emit('voiceMute', {
+      roomId: roomData.value.id,
+      isMuted: isMuted.value
+    })
+  }
+
+  // 更新语音房间用户列表
+  const updateVoiceChannelUsers = (channel, users) => {
+    if (!channel || !Array.isArray(users)) return
+
+    // 更新指定语音房间的用户列表
+    voiceChannels.value[channel] = users
+  }
+
+  // 添加用户到语音房间
+  const addUserToVoiceChannel = (data) => {
+    if (!data || !data.userId || !data.channel) return
+
+    // 确保该房间存在
+    if (!voiceChannels.value[data.channel]) {
+      voiceChannels.value[data.channel] = []
+    }
+
+    // 检查用户是否已存在
+    const userExists = voiceChannels.value[data.channel].some(u => u.userId === data.userId)
+    if (!userExists) {
+      // 添加用户
+      voiceChannels.value[data.channel].push({
+        userId: data.userId,
+        username: data.username,
+        teamId: data.teamId,
+        role: data.role,
+        isMuted: data.isMuted || false
+      })
+    }
+  }
+
+  // 从语音房间移除用户
+  const removeUserFromVoiceChannel = (data) => {
+    if (!data || !data.userId || !data.previousChannel) return
+
+    // 确保该房间存在
+    if (!voiceChannels.value[data.previousChannel]) return
+
+    // 移除用户
+    voiceChannels.value[data.previousChannel] = voiceChannels.value[data.previousChannel].filter(
+      u => u.userId !== data.userId
+    )
+  }
+
+  // 更新用户的静音状态
+  const updateUserMuteStatus = (userId, isMuted, channel) => {
+    if (!userId || !channel) return
+
+    // 确保该房间存在
+    if (!voiceChannels.value[channel]) return
+
+    // 更新用户的静音状态
+    const user = voiceChannels.value[channel].find(u => u.userId === userId)
+    if (user) {
+      user.isMuted = isMuted
+    }
+  }
+
+  // 初始化语音通信
+  const initVoiceCommunication = async () => {
+    // 引入 VoiceChat 类
+    const VoiceChat = (await import('../utils/voiceChat')).default
+
+    // 创建语音实例
+    if (!voiceInstance.value && roomData.value && roomData.value.id) {
+      const socketStore = useSocketStore()
+      const socket = socketStore.getSocket()
+
+      if (socket) {
+        voiceInstance.value = new VoiceChat(socket, roomData.value.id)
+        await voiceInstance.value.initialize()
+      }
+    }
+  }
+
+  // 清理语音资源
+  const cleanupVoice = () => {
+    if (voiceInstance.value) {
+      voiceInstance.value.dispose()
+      voiceInstance.value = null
+    }
+
+    hasJoinedVoice.value = false
+    isMuted.value = false
+    currentVoiceChannel.value = 'none'
   }
 
   // 消息管理方法
@@ -546,7 +719,6 @@ export const useRoomStore = defineStore('room', () => {
         teamId: message.teamId,
         channel: channel
       }
-      console.log('添加系统消息:', message.content)
     } else {
       // 普通用户消息
       formattedMessage = {
@@ -575,7 +747,6 @@ export const useRoomStore = defineStore('room', () => {
     } else {
       // 公共消息直接添加
       messages.value[channel].push(formattedMessage)
-      console.log('添加公共消息:', formattedMessage)
     }
 
     // 确保当前房间的消息列表也包含这条消息
@@ -1558,6 +1729,24 @@ export const useRoomStore = defineStore('room', () => {
     // 消息管理方法
     addMessage,
     loadMessages,
-    clearMessages
+    clearMessages,
+
+    // 语音通信相关状态
+    isMuted,
+    currentVoiceChannel,
+    voiceChannels,
+    currentVoiceUsers,
+
+    // 语音通信相关方法
+    switchVoiceChannel,
+    joinVoiceChannel,
+    leaveVoiceChannel,
+    toggleMute,
+    updateVoiceChannelUsers,
+    addUserToVoiceChannel,
+    removeUserFromVoiceChannel,
+    updateUserMuteStatus,
+    initVoiceCommunication,
+    cleanupVoice
   }
 })

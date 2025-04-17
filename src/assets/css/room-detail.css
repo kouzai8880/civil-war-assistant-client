@@ -1599,6 +1599,125 @@
 }
 
 /* 语音相关样式 */
+.voice-controls {
+  padding: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 语音房间选择 */
+.voice-channels {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.btn-voice-channel {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.btn-voice-channel:hover {
+  background-color: rgba(255, 152, 0, 0.1);
+  color: #fff;
+}
+
+.btn-voice-channel.active {
+  background-color: #ff9800;
+  color: white;
+  border-color: #ff9800;
+}
+
+/* 语音控制按钮 */
+.voice-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.btn-mic, .btn-mute {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.btn-mic:hover, .btn-mute:hover {
+  background-color: rgba(255, 152, 0, 0.1);
+  color: #fff;
+}
+
+.btn-mic.active {
+  background-color: #67c23a;
+  color: white;
+  border-color: #67c23a;
+}
+
+.btn-mic.active.muted {
+  background-color: #f56c6c;
+  color: white;
+  border-color: #f56c6c;
+}
+
+/* 语音参与者列表 */
+.voice-participants {
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.voice-participants-header {
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.voice-participants-list {
+  max-height: 120px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.voice-participant {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.voice-participant:last-child {
+  border-bottom: none;
+}
+
+.voice-participant-name {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.voice-muted-icon {
+  color: #f56c6c;
+  font-size: 16px;
+}
+
+/* 旧的语音相关样式，保留以兼容旧代码 */
 .team-voice-tabs {
   display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);

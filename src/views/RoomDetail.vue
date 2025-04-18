@@ -746,6 +746,13 @@ onUnmounted(() => {
 const addUserToSpectators = async () => {
   if (!roomData.value || !userStore.userId) return
 
+  // 检查是否可以加入观众席
+  if (roomData.value.status !== 'waiting') {
+    console.error('无法加入观众席：对局已经开始')
+    ElMessage.error('对局已经开始，无法加入观众席')
+    return
+  }
+
   try {
     console.log(`用户 ${userStore.username} 尝试加入观众席, 房间ID: ${roomId.value}`)
 
@@ -904,6 +911,13 @@ const leaveRoom = async () => {
   if (!userStore.userId) {
     console.error('无法离开房间：用户未登录')
     router.push('/login')
+    return
+  }
+
+  // 检查是否可以离开房间
+  if (roomData.value.status !== 'waiting' && !isSpectator.value) {
+    console.error('无法离开房间：对局已经开始')
+    ElMessage.error('对局已经开始，无法离开房间')
     return
   }
 
@@ -1451,6 +1465,50 @@ const refreshRoomDetail = async (autoJoin = false) => {
               <div :class="['room-status', statusClass(roomData.status)]">
                 {{ statusText(roomData.status) }}
               </div>
+
+              <!-- 房间操作按钮 - 移到标题右上角 -->
+              <div class="room-header-actions">
+                <!-- 房主可以开始游戏，当玩家数量等于10时 -->
+                <el-button
+                  v-if="isCreator && roomData.status === 'waiting' && players.length === 10"
+                  type="primary"
+                  @click="startGame"
+                  class="action-btn"
+                >
+                  开始游戏
+                </el-button>
+
+                <!-- 一队队长选择红蓝方按钮 -->
+                <el-button
+                  v-if="showPickSideButton"
+                  type="warning"
+                  @click="sideSelectorVisible = true"
+                  class="action-btn"
+                >
+                  选择红蓝方
+                </el-button>
+
+                <!-- 房主可以开始游戏 -->
+                <el-button
+                  v-if="showStartGameButton"
+                  type="success"
+                  @click="startGame"
+                  class="action-btn"
+                >
+                  开始游戏
+                </el-button>
+
+                <!-- 离开房间按钮 -->
+                <el-button
+                  type="danger"
+                  @click="leaveRoom"
+                  class="action-btn"
+                  :disabled="!isSpectator && roomData.status !== 'waiting'"
+                  :title="!isSpectator && roomData.status !== 'waiting' ? '对局已经开始，无法离开房间' : ''"
+                >
+                  离开房间
+                </el-button>
+              </div>
             </div>
 
             <div class="room-info-bar">
@@ -1511,45 +1569,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
               />
             </div>
 
-            <!-- 房间操作按钮 -->
-            <div class="room-actions">
-              <!-- 房主可以开始游戏，当玩家数量等于10时 -->
-              <el-button
-                v-if="isCreator && roomData.status === 'waiting' && players.length === 10"
-                type="primary"
-                @click="startGame"
-                class="action-btn"
-              >
-                开始游戏
-              </el-button>
-
-              <!-- 已移除队长选择角色按钮 -->
-
-              <!-- 一队队长选择红蓝方按钮 -->
-              <el-button
-                v-if="showPickSideButton"
-                type="warning"
-                @click="sideSelectorVisible = true"
-                class="action-btn"
-              >
-                选择红蓝方
-              </el-button>
-
-              <!-- 房主可以开始游戏 -->
-              <el-button
-                v-if="showStartGameButton"
-                type="success"
-                @click="startGame"
-                class="action-btn"
-              >
-                开始游戏
-              </el-button>
-
-              <!-- 离开房间按钮 -->
-              <el-button type="danger" @click="leaveRoom" class="action-btn">
-                离开房间
-              </el-button>
-            </div>
+            <!-- 房间操作按钮已移至标题右上角 -->
           </div>
 
           <div class="main-content">
@@ -1564,13 +1584,15 @@ const refreshRoomDetail = async (autoJoin = false) => {
                   <div class="header-buttons">
                     <!-- 如果当前用户在玩家列表中，显示加入观众席按钮 -->
                     <el-button
-                      v-if="!isSpectator && roomData.status === 'waiting'"
+                      v-if="!isSpectator"
                       type="primary"
                       size="small"
                       class="join-spectator-btn"
                       @click="addUserToSpectators"
+                      :disabled="roomData.status !== 'waiting'"
+                      :title="roomData.status !== 'waiting' ? '对局已经开始，无法加入观众席' : ''"
                     >
-                      观看模式
+                      加入观众席
                     </el-button>
                   </div>
                 </div>
@@ -1706,7 +1728,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                               class="join-team-btn"
                               @click="joinRoom"
                             >
-                              加入队伍
+                              加入对局
                             </el-button>
                           </div>
                         </div>
@@ -2138,9 +2160,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <!-- 始终显示的聊天区域 -->
                 <div class="chat-wrapper">
                   <div class="section-card chat-container-main">
-                    <div class="card-header">
-                      <h2 class="section-title">聊天室</h2>
-                    </div>
+                   
 
                     <div class="chat-tabs">
                       <!-- 聊天频道选择 -->
@@ -2268,13 +2288,13 @@ const refreshRoomDetail = async (autoJoin = false) => {
           </el-dialog>
         </template>
 
-        <el-empty
-          v-else-if="!isLoading"
+        <!-- <el-empty
+          v-else-if="!isLoading && !roomStore.isLeavingRoom"
           description="房间不存在或已被删除"
           :image-size="200"
         >
           <el-button type="primary" @click="router.push('/rooms')">返回房间列表</el-button>
-        </el-empty>
+        </el-empty> -->
       </template>
     </el-skeleton>
 

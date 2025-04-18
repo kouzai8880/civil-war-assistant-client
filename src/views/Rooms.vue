@@ -328,8 +328,10 @@ const getPageList = () => {
     </div>
 
     <!-- 房间列表 -->
-    <div class="room-list-grid" v-loading="isLoading">
-      <div v-for="room in rooms" :key="room.id" class="room-card">
+    <el-skeleton :loading="isLoading" animated :count="6" :throttle="500">
+      <template #default>
+        <div class="room-list-grid">
+          <div v-for="room in rooms" :key="room.id" class="room-card">
         <div class="room-card-header">
           <h3 class="room-title">{{ room.name }}</h3>
           <span :class="['room-status', statusClass(room.status)]">{{ statusText(room.status) }}</span>
@@ -378,8 +380,10 @@ const getPageList = () => {
           <span class="room-time">创建于 {{ formatTime(room.createTime) }}</span>
           <a href="javascript:void(0)" class="btn btn-primary" @click="joinRoom(room)">加入房间</a>
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
+      </template>
+    </el-skeleton>
 
     <!-- 分页 -->
     <div class="pagination">

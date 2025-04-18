@@ -16,6 +16,7 @@ export const useRoomStore = defineStore('room', () => {
   const currentRoom = ref(null)
   const loading = ref(false)
   const error = ref(null)
+  const isLeavingRoom = ref(false) // 标记用户是否正在离开房间
   const pagination = ref({
     total: 0,
     current: 1,
@@ -1714,6 +1715,9 @@ export const useRoomStore = defineStore('room', () => {
 
       console.log('当前用户离开房间，准备跳转')
 
+      // 设置正在离开房间状态，避免显示“房间不存在”提示
+      isLeavingRoom.value = true
+
       // 清除玩家本地的 roomStore.currentRoom 缓存
       console.log('清除本地房间缓存数据')
       setCurrentRoom(null)
@@ -1727,9 +1731,9 @@ export const useRoomStore = defineStore('room', () => {
       console.log(`离开房间后跳转到上一个路由: ${prevRoute}`)
 
       // 使用setTimeout确保跳转发生
-      setTimeout(() => {
-        router.push(prevRoute)
-      }, 100)
+      router.push(prevRoute)
+      // 跳转完成后重置离开房间状态
+      isLeavingRoom.value = false
 
       ElMessage.success('成功离开房间')
     } catch (error) {
@@ -1737,6 +1741,7 @@ export const useRoomStore = defineStore('room', () => {
 
       // 即使出错，也尝试清除缓存
       setCurrentRoom(null)
+      isLeavingRoom.value = false // 重置离开房间状态
     }
   }
 
@@ -2053,6 +2058,7 @@ export const useRoomStore = defineStore('room', () => {
     currentRoom,
     loading,
     error,
+    isLeavingRoom,
     pagination,
     previousRoute,
 

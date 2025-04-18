@@ -23,6 +23,8 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
+  flex-wrap: wrap;
 }
 
 .room-title h1 {
@@ -131,10 +133,19 @@
   margin-bottom: 1.5rem;
 }
 
+/* 原房间操作按钮样式 - 已移除 */
 .room-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* 房间标题右上角按钮样式 */
+.room-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
   flex-wrap: wrap;
 }
 

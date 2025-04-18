@@ -42,6 +42,11 @@ const isLoading = ref(true)
 
 // 加载数据，从后端直接获取
 onMounted(async () => {
+  loadData()
+})
+
+// 加载数据函数
+const loadData = async () => {
   try {
     // 后台异步加载热门房间
     isLoading.value = true
@@ -60,10 +65,12 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('加载数据失败:', error)
+    ElMessage.error('加载房间列表失败，请稍后重试')
+    hotRooms.value = []
   } finally {
     isLoading.value = false
   }
-})
+}
 
 // 房间状态标签样式
 const statusClass = (status) => {
@@ -306,9 +313,9 @@ const formatTime = (timestamp) => {
                   </div>
                   <div class="room-footer">
                     <a href="javascript:void(0)"
-                       :class="['btn', room.status === 'waiting' ? 'btn-primary' : 'btn-outline']"
+                       :class="['btn', 'btn-primary']"
                        @click.stop="joinRoom(room)">
-                      {{ room.status === 'waiting' ? '加入房间' : '观战中+' }}
+                      {{ room.status === 'waiting' ? '加入房间' : '进入观战' }}
                     </a>
                   </div>
                 </div>

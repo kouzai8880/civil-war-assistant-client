@@ -1990,8 +1990,8 @@ export const useRoomStore = defineStore('room', () => {
       }
 
       // 加载聊天历史
-      if (event.detail.data?.messages) {
-        loadMessages(event.detail.data.messages, true)
+      if (event.detail.data?.room.messages) {
+        loadMessages(event.detail.data.room.messages, true)
       }
     } catch (error) {
       console.error('处理roomJoined事件时出错:', error)

@@ -1717,12 +1717,14 @@ const refreshRoomDetail = async (autoJoin = false) => {
 
               <!-- 语音区域 -->
               <div class="voice-container">
-                <div class="card-header">
-                  <h2 class="section-title">
-                    {{ roomStore.currentVoiceChannel === 'team1' ? '一队语音' :
-                       roomStore.currentVoiceChannel === 'team2' ? '二队语音' : '公共语音' }}
-                  </h2>
-                  <div class="voice-controls">
+                <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center;">
+                    <h2 class="section-title" style="margin: 0; font-size: 1.3rem;">
+                      {{ roomStore.currentVoiceChannel === 'team1' ? '一队语音' :
+                         roomStore.currentVoiceChannel === 'team2' ? '二队语音' : '公共语音' }}
+                    </h2>
+                  </div>
+                  <div class="voice-controls" style="margin-left: auto;">
                     <!-- 加入/退出语音按钮 -->
                     <button
                       class="btn-voice"
@@ -1730,6 +1732,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                         'active': roomStore.hasJoinedVoice
                       }"
                       @click="toggleVoice"
+                      style="display: flex; align-items: center; height: 32px;"
                     >
                       <i class="el-icon">
                         <component :is="roomStore.hasJoinedVoice ? 'CircleClose' : 'Headset'"></component>
@@ -1746,6 +1749,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                         'muted': roomStore.isMuted
                       }"
                       @click="toggleMute"
+                      style="display: flex; align-items: center; justify-content: center; height: 32px; width: 36px;"
                     >
                       <i class="el-icon">
                         <component :is="roomStore.isMuted ? 'MuteNotification' : 'Mic'"></component>

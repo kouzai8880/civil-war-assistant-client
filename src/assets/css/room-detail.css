@@ -364,16 +364,13 @@
 /* 语音区域样式 */
 .voice-container {
   flex: 0 0 auto;
-  height: calc(100% - 600px - 1px); /* 减去观众栏高度和边框 */
+  height: calc(100% - 480px - 1px); /* 减去观众栏高度和边框 */
   min-height: 180px;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-top: 1rem;
+  margin-top: -1rem;
 }
 
 /* 卡片头部样式 */
@@ -389,7 +386,9 @@
 /* 语音区域卡片头部特殊样式 */
 .voice-container .card-header {
   flex-wrap: nowrap;
-  padding: 0.5rem 0;
+  padding: 0.25rem 1rem;
+  align-items: center; /* 中心对齐 */
+  margin-bottom: 0.25rem;
 }
 
 .voice-controls {
@@ -412,6 +411,7 @@
   padding: 0.5rem 0.75rem;
   margin-left: 0.5rem;
   font-size: 0.9rem;
+  height: 36px; /* 固定高度 */
 }
 
 .btn-mic, .btn-speaker {
@@ -424,6 +424,7 @@
 .btn-voice {
   background-color: #4caf50;
   color: white;
+  line-height: 1;
 }
 
 .btn-voice.active {
@@ -453,11 +454,10 @@
 .voice-participants {
   flex: 1;
   overflow-y: auto;
-  margin: 0.75rem 0;
+  margin: 0.25rem 0;
   max-height: calc(100% - 100px); /* 留出空间给标题和按钮 */
   display: flex;
   flex-direction: column;
-  padding: 0.5rem;
 }
 
 /* 空语音频道提示样式 */
@@ -644,6 +644,9 @@
   margin: 0;
   font-size: 1.2rem;
   color: #fff;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
 }
 
 .single-team {
@@ -1556,10 +1559,11 @@
 .spectators-sidebar {
   padding-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  height: 450px;
+  height: 480px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-bottom: 0;
 }
 
 .spectators-sidebar-list {
@@ -1845,8 +1849,6 @@
 /* 语音相关样式 */
 .voice-controls {
   padding: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* 语音房间选择 */
@@ -1919,8 +1921,6 @@
 /* 语音参与者列表 */
 .voice-participants {
   margin-bottom: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -1984,52 +1984,7 @@
   background-color: rgba(255, 152, 0, 0.1);
 }
 
-/* 玩家列表 -->
-<div class="players-list">
-  <h3>玩家列表 ({{ room.players.length }}/{{ room.maxPlayers }})</h3>
-  <div class="player-items">
-    <div v-for="player in room.players" :key="player.userId" class="player-item">
-      <div class="player-info">
-        <span class="player-name">{{ player.username }}</span>
-        <span v-if="player.userId === room.creatorId" class="creator-badge">房主</span>
-      </div>
-      <div class="player-actions">
-        <el-button
-          v-if="isCreator && player.userId !== userStore.userId"
-          type="danger"
-          size="small"
-          @click="kickPlayer(player.userId, player.username)"
-          :icon="Delete"
-        >
-          踢出
-        </el-button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 观众列表 -->
-<div class="spectators-list">
-  <h3>观众列表 ({{ room.spectators.length }})</h3>
-  <div class="spectator-items">
-    <div v-for="spectator in room.spectators" :key="spectator.userId" class="spectator-item">
-      <div class="spectator-info">
-        <span class="spectator-name">{{ spectator.username }}</span>
-      </div>
-      <div class="spectator-actions">
-        <el-button
-          v-if="isCreator && spectator.userId !== userStore.userId"
-          type="danger"
-          size="small"
-          @click="kickPlayer(spectator.userId, spectator.username)"
-          :icon="Delete"
-        >
-          踢出
-        </el-button>
-      </div>
-    </div>
-  </div>
-</div>
+/* 玩家列表和观众列表样式 */
 
 .players-list,
 .spectators-list {

@@ -1199,12 +1199,31 @@ export const useRoomStore = defineStore('room', () => {
 
         // 创建成功后自动设置为当前房间
         const roomInfo = response.data.room || response.data
-        currentRoom.value = roomInfo
-
+        setCurrentRoom(roomInfo)
         // 添加到房间列表
         if (rooms.value && rooms.value.length > 0) {
           rooms.value = [roomInfo, ...rooms.value]
         }
+
+        // 重要：使用Socket.IO连接到房间
+        const socketStore = useSocketStore()
+        if (!socketStore.isConnected) {
+          console.log('WebSocket未连接，尝试连接...')
+          await socketStore.connect()
+          if (!socketStore.isConnected) {
+            console.error('WebSocket连接失败，但仍然继续处理')
+          }
+        }
+
+        // 使用Socket.IO加入房间
+        console.log(`使用Socket.IO加入房间: ${roomInfo.id}`)
+        socketStore.joinRoom(roomInfo.id)
+
+        // 添加延迟确保模态框关闭后再导航
+        router.push({
+          path: `/room/${roomInfo.id}`,
+          replace: false
+        })
 
         return roomInfo
       } else {

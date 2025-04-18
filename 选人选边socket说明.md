@@ -57,12 +57,12 @@ socket.emit('captain.selectPlayer', {
 socket.on('player.selected', (data) => {
   // 更新UI，显示玩家已被选择
   updatePlayerTeam(data.userId, data.teamId);
-  
+
   // 如果是当前用户是下一个选人的队伍的队长，显示选人界面
   if (data.nextTeamPick === myTeamId && isCaptain) {
     showPlayerSelectionUI();
   }
-  
+
   // 如果选人阶段结束，更新UI
   if (data.nextTeamPick === null) {
     updateGameStatus('gaming');
@@ -138,7 +138,7 @@ socket.emit('captain.selectSide', {
 socket.on('team.selected_side', (data) => {
   // 更新UI，显示队伍阵营
   updateTeamSides(data.teams);
-  
+
   // 如果需要，显示游戏准备开始的提示
   showGameStartingPrompt();
 });
@@ -181,10 +181,10 @@ socket.on('team.selected_side', (data) => {
    socket.on('player.selected', (data) => {
      // 将玩家从未分配列表移动到相应队伍
      movePlayerToTeam(data.userId, data.teamId);
-     
+
      // 更新下一个选人的提示
      updateNextPickPrompt(data.nextTeamPick);
-     
+
      // 如果选人阶段结束，显示选择红蓝方界面
      if (data.remainingPlayers === 0) {
        showSelectSideUI();
@@ -217,7 +217,7 @@ socket.on('team.selected_side', (data) => {
      data.teams.forEach(team => {
        updateTeamSideUI(team.id, team.side);
      });
-     
+
      // 显示游戏准备开始的提示
      showGameStartingPrompt();
    });
@@ -229,8 +229,8 @@ socket.on('team.selected_side', (data) => {
 2. 房主点击"开始游戏"后：
    - 如果选择随机分队，直接进入`gaming`状态
    - 如果选择队长选人，进入`picking`状态
-3. 队长选人完成后，状态变为`gaming`
-4. 队长选择红蓝方（状态保持为`gaming`）
+3. 队长选人完成后，状态变为`side_picking`（选边阶段）
+4. 队长选择红蓝方后，状态变为`gaming`
 5. 游戏开始
 
 ## 权限控制

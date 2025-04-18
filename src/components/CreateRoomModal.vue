@@ -133,14 +133,6 @@ const submitForm = async () => {
       ElMessage.success('房间创建成功！')
       emit('created', createdRoom)
       closeModal()
-      
-      // 添加延迟确保模态框关闭后再导航
-      setTimeout(() => {
-        router.push({ 
-          path: `/room/${createdRoom.id}`,
-          replace: false
-        })
-      }, 300)
     } else {
       console.error('创建房间失败: 未收到有效的房间信息')
       ElMessage.error('创建房间失败: 未收到有效的房间信息')

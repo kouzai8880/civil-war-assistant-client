@@ -301,7 +301,7 @@
   background-color: rgba(30, 31, 45, 0.95);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
-  z-index: 10;
+  z-index: 5; /* 降低 z-index，使其低于好友侧边栏 */
   margin: 0;
   gap: 10px;
 }
@@ -524,20 +524,24 @@
 .player-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  gap: 1.2rem;
   padding: 1.5rem;
   max-height: 400px;
   overflow-y: auto;
+  align-items: start; /* 确保所有卡片从顶部对齐 */
 }
 
 .player-card {
   display: flex;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 0.85rem;
   transition: all 0.3s;
   position: relative;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  height: 70px; /* 增加高度 */
 }
 
 .player-card:hover {
@@ -547,11 +551,19 @@
 }
 
 .player-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem; /* 增大头像尺寸 */
+  height: 3rem; /* 增大头像尺寸 */
   border-radius: 50%;
-  margin-right: 0.75rem;
+  margin-right: 0.85rem;
   object-fit: cover;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.player-card:hover .player-avatar {
+  border-color: rgba(255, 152, 0, 0.5);
+  transform: scale(1.05);
 }
 
 .player-info {
@@ -560,26 +572,40 @@
 
 .player-name {
   font-weight: bold;
+  font-size: 1.05rem; /* 增大字体大小 */
   margin-bottom: 0.25rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.02em; /* 增加字间距，提高可读性 */
 }
 
 .player-badge {
   font-size: 0.7rem;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
-  margin-left: 0.5rem;
   white-space: nowrap;
+  display: inline-block;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .player-badge.creator {
-  background-color: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c, #e74c3c);
+  color: white;
+  font-weight: bold;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .player-badge.captain {
-  background-color: #5f79fc;
+  background: linear-gradient(135deg, #5f79fc, #3f51b5);
+  color: white;
+  font-weight: bold;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .player-status {
@@ -598,19 +624,93 @@
   display: flex;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.02);
-  border-radius: 8px;
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 0.85rem;
   color: #8b8fa3;
   border: 1px dashed rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+  height: 70px; /* 与玩家卡片保持相同高度 */
 }
 
 .empty-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem; /* 增大头像尺寸 */
+  height: 3rem; /* 增大头像尺寸 */
   border-radius: 50%;
-  margin-right: 0.75rem;
+  margin-right: 0.85rem;
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px dashed rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-slot:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.empty-slot:hover .empty-avatar {
+  border-color: rgba(255, 152, 0, 0.3);
+  background-color: rgba(255, 152, 0, 0.05);
+}
+
+.avatar-placeholder {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.05) 75%, transparent 75%);
+  background-size: 8px 8px;
+  opacity: 0.5;
+  animation: moveBackground 3s linear infinite;
+}
+
+@keyframes moveBackground {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 16px 16px;
+  }
+}
+
+.waiting-text {
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem; /* 与玩家名称保持一致 */
+  color: #a0a0b0; /* 稍微亮一点的颜色 */
+  letter-spacing: 0.02em;
+  font-weight: bold; /* 与玩家名称保持一致 */
+  margin-bottom: 0.25rem; /* 与玩家名称保持一致 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.waiting-dots {
+  display: inline-block;
+  width: 24px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  margin-left: 4px; /* 增加间距 */
+  color: #ff9800; /* 使用高亮颜色 */
+}
+
+.waiting-dots::after {
+  content: '...';
+  position: absolute;
+  left: 0;
+  animation: dots 1.5s infinite steps(4, end);
+  color: #ff9800; /* 使用高亮颜色 */
+}
+
+@keyframes dots {
+  0% { clip-path: inset(0 100% 0 0); }
+  25% { clip-path: inset(0 75% 0 0); }
+  50% { clip-path: inset(0 50% 0 0); }
+  75% { clip-path: inset(0 25% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
 }
 
 /* 观众区域 */
@@ -979,7 +1079,7 @@
   bottom: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  z-index: 100 !important;
+  z-index: 5 !important; /* 降低 z-index，使其低于好友侧边栏 */
   margin: 0 !important;
   gap: 10px !important;
   height: 70px !important;
@@ -1445,6 +1545,7 @@
   background-color: rgba(0, 0, 0, 0.1);
   position: relative; /* 添加相对定位 */
   padding-bottom: 80px; /* 为输入框预留空间 */
+  z-index: 5; /* 确保聊天容器的z-index低于好友侧边栏 */
 }
 
 .chat-wrapper .chat-tabs {
@@ -1481,7 +1582,7 @@
   bottom: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  z-index: 100 !important;
+  z-index: 5 !important; /* 降低 z-index，使其低于好友侧边栏 */
   margin: 0 !important;
   gap: 10px !important;
   height: 70px !important;

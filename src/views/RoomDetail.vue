@@ -27,19 +27,18 @@ const roomData = computed(() => {
 
 // 玩家列表
 const players = computed(() => {
-  if (!roomData.value) return []
-  return roomData.value.players || []
+  if (!roomStore.currentRoom) return []
+  return roomStore.currentRoom.room ? roomStore.currentRoom.room.players : roomStore.currentRoom.players
 })
 
 // 观众列表
 const spectators = computed(() => {
-  if (!roomData.value) return []
-  return roomData.value.spectators || []
+  if (!roomStore.currentRoom) return []
+  return roomStore.currentRoom.room ? roomStore.currentRoom.room.spectators : roomStore.currentRoom.spectators
 })
 
 // 当前用户ID
 const currentUserId = computed(() => userStore.userId)
-
 
 
 // 用户是否是房主
@@ -1768,8 +1767,15 @@ const refreshRoomDetail = async (autoJoin = false) => {
                             :key="`empty-slot-${n}`"
                             class="empty-slot"
                           >
-                            <div class="empty-avatar"></div>
-                            <div>等待加入...</div>
+                            <div class="empty-avatar">
+                              <div class="avatar-placeholder"></div>
+                            </div>
+                            <div class="player-info">
+                              <div class="player-name waiting-text">
+                                <span>等待加入</span>
+                                <span class="waiting-dots">...</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2160,7 +2166,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <!-- 始终显示的聊天区域 -->
                 <div class="chat-wrapper">
                   <div class="section-card chat-container-main">
-                   
+
 
                     <div class="chat-tabs">
                       <!-- 聊天频道选择 -->

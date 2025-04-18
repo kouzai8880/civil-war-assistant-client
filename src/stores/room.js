@@ -4,6 +4,7 @@ import { roomApi } from '../services/api'
 import { useUserStore } from './user'
 import { useSocketStore } from './socket'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
 /**
  * 房间管理Store
@@ -20,6 +21,11 @@ export const useRoomStore = defineStore('room', () => {
     current: 1,
     pageSize: 12
   })
+
+  // 事件监听器状态管理
+  const eventListenersActive = ref(false)
+  const eventHandlers = ref({}) // 存储事件处理函数的引用
+  const router = useRouter()
 
   // 记录进入房间前的路由
   const previousRoute = ref(null)
@@ -764,6 +770,15 @@ export const useRoomStore = defineStore('room', () => {
 
     // 强制触发响应式更新
     messages.value = { ...messages.value }
+
+    // 自动滚动到底部
+    nextTick(() => {
+      // 尝试获取当前活动频道的聊天消息容器
+      const chatBox = document.querySelector('.chat-messages')
+      if (chatBox) {
+        chatBox.scrollTop = chatBox.scrollHeight
+      }
+    })
   }
 
   // 加载历史消息
@@ -850,6 +865,17 @@ export const useRoomStore = defineStore('room', () => {
 
       // 强制触发响应式更新
       messages.value = { ...messages.value }
+
+      // 自动滚动到底部
+      if (addedCount > 0) {
+        nextTick(() => {
+          // 尝试获取当前活动频道的聊天消息容器
+          const chatBox = document.querySelector('.chat-messages')
+          if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight
+          }
+        })
+      }
 
       return addedCount > 0 // 返回是否添加了新消息
     } catch (error) {
@@ -1019,15 +1045,6 @@ export const useRoomStore = defineStore('room', () => {
     // }
   }
 
-  // 监听房间相关事件
-  // 监听加入房间成功事件
-  window.addEventListener('roomJoined', (event) => {
-    if (event.detail && event.detail.status === 'success') {
-      const roomData = event.detail.data.room
-      setCurrentRoom(roomData)
-    }
-  })
-
   // 监听房间详情事件
   window.addEventListener('roomDetail', (event) => {
     console.log('收到roomDetail事件:', event.detail)
@@ -1036,132 +1053,6 @@ export const useRoomStore = defineStore('room', () => {
       setCurrentRoom(roomData)
       loading.value = false
       error.value = null
-    }
-  })
-
-  // 监听角色变更事件
-  window.addEventListener('roleChanged', (event) => {
-    console.log('收到roleChanged事件:', event.detail)
-    if (event.detail && event.detail.status === 'success') {
-      // 只提取需要的room属性
-      const { room } = event.detail.data
-      setCurrentRoom(room)
-    }
-  })
-
-  // 监听房间状态更新事件
-  window.addEventListener('roomStatusUpdate', (event) => {
-    console.log('收到roomStatusUpdate事件:', event.detail)
-    if (event.detail && event.detail.roomId && currentRoom.value) {
-      if (event.detail.roomId === currentRoom.value.id) {
-        // 更新房间状态
-        currentRoom.value.status = event.detail.status
-        // 重新获取房间详情
-        fetchRoomDetail(event.detail.roomId)
-      }
-    }
-  })
-
-  // 监听新观众加入事件
-  window.addEventListener('spectatorJoined', (event) => {
-    console.log('收到spectatorJoined事件:', event.detail)
-    if (event.detail && currentRoom.value) {
-      // 确保观众列表存在
-      if (!currentRoom.value.spectators) {
-        currentRoom.value.spectators = []
-      }
-      // 添加新观众
-      currentRoom.value.spectators.push(event.detail)
-    }
-  })
-
-  // 监听新玩家加入事件
-  window.addEventListener('playerJoined', (event) => {
-    console.log('收到playerJoined事件:', event.detail)
-    if (event.detail && currentRoom.value) {
-      // 确保玩家列表存在
-      if (!currentRoom.value.players) {
-        currentRoom.value.players = []
-      }
-      // 添加新玩家
-      currentRoom.value.players.push(event.detail)
-    }
-  })
-
-  // 监听观众离开事件
-  window.addEventListener('spectatorLeft', (event) => {
-    console.log('收到spectatorLeft事件:', event.detail)
-    if (event.detail && event.detail.userId && currentRoom.value && currentRoom.value.spectators) {
-      // 从观众列表中移除该用户
-      currentRoom.value.spectators = currentRoom.value.spectators.filter(
-        spectator => spectator.userId !== event.detail.userId
-      )
-    }
-  })
-
-  // 监听玩家离开事件
-  window.addEventListener('playerLeft', (event) => {
-    console.log('收到playerLeft事件:', event.detail)
-    if (event.detail && event.detail.userId && currentRoom.value && currentRoom.value.players) {
-      // 从玩家列表中移除该用户
-      currentRoom.value.players = currentRoom.value.players.filter(
-        player => player.userId !== event.detail.userId
-      )
-    }
-  })
-
-  // 监听观众加入玩家列表事件
-  window.addEventListener('spectatorMoveToPlayer', (event) => {
-    console.log('收到spectatorMoveToPlayer事件:', event.detail)
-    if (event.detail && event.detail.userId && currentRoom.value) {
-      // 从观众列表中移除该用户
-      if (currentRoom.value.spectators) {
-        currentRoom.value.spectators = currentRoom.value.spectators.filter(
-          spectator => spectator.userId !== event.detail.userId
-        )
-      }
-      // 添加到玩家列表
-      if (!currentRoom.value.players) {
-        currentRoom.value.players = []
-      }
-      currentRoom.value.players.push(event.detail)
-    }
-  })
-
-  // 监听玩家加入观众席事件
-  window.addEventListener('playerMoveToSpectator', (event) => {
-    console.log('收到playerMoveToSpectator事件:', event.detail)
-    if (event.detail && event.detail.userId && currentRoom.value) {
-      // 从玩家列表中移除该用户
-      if (currentRoom.value.players) {
-        currentRoom.value.players = currentRoom.value.players.filter(
-          player => player.userId !== event.detail.userId
-        )
-      }
-      // 添加到观众列表
-      if (!currentRoom.value.spectators) {
-        currentRoom.value.spectators = []
-      }
-      currentRoom.value.spectators.push(event.detail)
-    }
-  })
-
-  // 监听游戏开始事件
-  window.addEventListener('gameStarted', (event) => {
-    console.log('收到gameStarted事件:', event.detail)
-    if (event.detail && currentRoom.value) {
-      // 更新房间状态
-      currentRoom.value.status = 'gaming'
-      // 更新队伍和玩家信息
-      if (event.detail.teams) {
-        currentRoom.value.teams = event.detail.teams
-      }
-      if (event.detail.players) {
-        currentRoom.value.players = event.detail.players
-      }
-      if (event.detail.nextTeamPick) {
-        currentRoom.value.nextTeamPick = event.detail.nextTeamPick
-      }
     }
   })
 
@@ -1177,35 +1068,6 @@ export const useRoomStore = defineStore('room', () => {
           player.teamId = event.detail.teamId
         }
       }
-    }
-  })
-
-  // 监听队伍状态更新事件
-  window.addEventListener('teamUpdate', (event) => {
-    console.log('收到teamUpdate事件:', event.detail)
-    if (event.detail && event.detail.teamId && currentRoom.value && currentRoom.value.teams) {
-      // 更新队伍状态
-      const team = currentRoom.value.teams.find(t => t.id === event.detail.teamId)
-      if (team) {
-        if (event.detail.captainId) {
-          team.captainId = event.detail.captainId
-        }
-        if (event.detail.players) {
-          team.players = event.detail.players
-        }
-        if (event.detail.side) {
-          team.side = event.detail.side
-        }
-      }
-    }
-  })
-
-  // 监听新消息事件 - 更新消息列表并处理显示
-  window.addEventListener('newMessage', (event) => {
-    console.log('收到newMessage事件（在room.js中）:', event.detail)
-    if (event.detail) {
-      // 添加新消息到消息列表
-      addMessage(event.detail)
     }
   })
 
@@ -1456,11 +1318,7 @@ export const useRoomStore = defineStore('room', () => {
       }
 
       // 等待一下，给WebSocket事件处理时间
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // 如果加入房间失败，并且是因为房间已满，则尝试加入观战席
-      // 注意：这里不需要额外的代码，因为我们已经在socketStore.joinRoom中处理了这种情况
-      // 如果房间已满，它会自动尝试加入观战席
+      await new Promise(resolve => setTimeout(resolve, 100))
 
       // 不再重新获取房间详情，减少API调用
       // 房间详情页会自动加载最新数据
@@ -1638,6 +1496,546 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
+  // 设置房间事件监听器
+  const setupRoomEventListeners = () => {
+    // 如果事件监听器已经激活，则不重复添加
+    const socketStore = useSocketStore()
+    if (eventListenersActive.value) {
+      console.log('事件监听器已经激活，不重复添加')
+      return
+    }
+
+    console.log('添加房间事件监听器')
+
+    // 添加房间事件监听器
+    window.addEventListener('roomJoined', handleRoomJoined)
+    window.addEventListener('roomLeft', handleRoomLeft)
+    window.addEventListener('roleChanged', handleRoleChanged)
+    window.addEventListener('roomStatusUpdate', handleRoomStatusUpdate)
+    window.addEventListener('spectatorJoined', handleSpectatorJoined)
+    window.addEventListener('playerJoined', handlePlayerJoined)
+    window.addEventListener('spectatorLeft', handleSpectatorLeft)
+    window.addEventListener('playerLeft', handlePlayerLeft)
+    window.addEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
+    window.addEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
+    window.addEventListener('gameStarted', handleGameStarted)
+    window.addEventListener('teamUpdate', handleTeamUpdate)
+    window.addEventListener('newMessage', handleNewMessage)
+    window.addEventListener('socketError', handleSocketError)
+    window.addEventListener('socketReconnected', handleSocketReconnected)
+
+    // 添加语音通信相关的事件监听器
+    window.addEventListener('voiceChannelJoined', handleVoiceChannelJoined)
+    window.addEventListener('voiceChannelLeft', handleVoiceChannelLeft)
+    window.addEventListener('voiceChannelUsers', handleVoiceChannelUsers)
+    window.addEventListener('userJoinedVoiceChannel', handleUserJoinedVoiceChannel)
+    window.addEventListener('userLeftVoiceChannel', handleUserLeftVoiceChannel)
+    window.addEventListener('voiceMuteUpdate', handleVoiceMuteUpdate)
+    window.addEventListener('voiceData', handleVoiceData)
+
+    // 添加选人选边相关的事件监听器
+    window.addEventListener('playerSelected', handlePlayerSelectedEvent)
+    window.addEventListener('teamSelectedSide', handleTeamSelectedSideEvent)
+
+    // 注册服务器事件到全局事件
+    const socket = socketStore.getSocket()
+    if (socket) {
+      socket.on('player.selected', (data) => {
+        console.log('[WebSocket事件] player.selected:', data)
+        window.dispatchEvent(new CustomEvent('playerSelected', { detail: data }))
+      })
+
+      socket.on('team.selected_side', (data) => {
+        console.log('[WebSocket事件] team.selected_side:', data)
+        window.dispatchEvent(new CustomEvent('teamSelectedSide', { detail: data }))
+      })
+    } else {
+      console.error('无法获取Socket实例，无法注册选人选边事件')
+    }
+
+    // 设置事件监听器状态为激活
+    eventListenersActive.value = true
+
+    // 检查是否有缓存的roomJoined事件
+    const cachedRoomJoinedEvent = socketStore.getCachedEvent('roomJoined')
+    if (cachedRoomJoinedEvent) {
+      console.log('发现缓存的roomJoined事件，立即处理')
+      handleRoomJoined({ detail: cachedRoomJoinedEvent })
+      // 清除缓存的事件，避免重复处理
+      socketStore.clearCachedEvent('roomJoined')
+    }
+
+    console.log('已添加房间事件监听器')
+  }
+
+  // 清除房间事件监听器
+  const cleanupRoomEventListeners = () => {
+    // 如果事件监听器未激活，则不需要清除
+    if (!eventListenersActive.value) {
+      console.log('事件监听器未激活，不需要清除')
+      return
+    }
+
+    console.log('清除房间事件监听器')
+
+    // 移除所有事件监听器
+    window.removeEventListener('roomJoined', handleRoomJoined)
+    window.removeEventListener('roomLeft', handleRoomLeft)
+    window.removeEventListener('roleChanged', handleRoleChanged)
+    window.removeEventListener('roomStatusUpdate', handleRoomStatusUpdate)
+    window.removeEventListener('spectatorJoined', handleSpectatorJoined)
+    window.removeEventListener('playerJoined', handlePlayerJoined)
+    window.removeEventListener('spectatorLeft', handleSpectatorLeft)
+    window.removeEventListener('playerLeft', handlePlayerLeft)
+    window.removeEventListener('spectatorMoveToPlayer', handleSpectatorMoveToPlayer)
+    window.removeEventListener('playerMoveToSpectator', handlePlayerMoveToSpectator)
+    window.removeEventListener('gameStarted', handleGameStarted)
+    window.removeEventListener('teamUpdate', handleTeamUpdate)
+    window.removeEventListener('newMessage', handleNewMessage)
+    window.removeEventListener('socketError', handleSocketError)
+    window.removeEventListener('socketReconnected', handleSocketReconnected)
+
+    // 移除语音通信相关的事件监听器
+    window.removeEventListener('voiceChannelJoined', handleVoiceChannelJoined)
+    window.removeEventListener('voiceChannelLeft', handleVoiceChannelLeft)
+    window.removeEventListener('voiceChannelUsers', handleVoiceChannelUsers)
+    window.removeEventListener('userJoinedVoiceChannel', handleUserJoinedVoiceChannel)
+    window.removeEventListener('userLeftVoiceChannel', handleUserLeftVoiceChannel)
+    window.removeEventListener('voiceMuteUpdate', handleVoiceMuteUpdate)
+    window.removeEventListener('voiceData', handleVoiceData)
+
+    // 移除选人选边相关的事件监听器
+    window.removeEventListener('playerSelected', handlePlayerSelectedEvent)
+    window.removeEventListener('teamSelectedSide', handleTeamSelectedSideEvent)
+
+    // 移除Socket.io事件监听器
+    const socketStore = useSocketStore()
+    const socket = socketStore.getSocket()
+    if (socket) {
+      // 移除所有事件监听器
+      socket.off('player.selected')
+      socket.off('team.selected_side')
+      socket.off('new_message')
+      socket.off('roomJoined')
+      socket.off('roleChanged')
+      socket.off('roomStatusUpdate')
+      socket.off('spectatorJoined')
+      socket.off('playerJoined')
+      socket.off('spectatorLeft')
+      socket.off('playerLeft')
+      socket.off('spectatorMoveToPlayer')
+      socket.off('playerMoveToSpectator')
+      socket.off('gameStarted')
+      socket.off('playerStatusUpdate')
+      socket.off('teamUpdate')
+      socket.off('socketError')
+      socket.off('socketReconnected')
+      console.log('Socket.io 事件监听器已移除')
+    }
+
+    // 设置事件监听器状态为非激活
+    eventListenersActive.value = false
+
+    console.log('已清除房间事件监听器')
+  }
+
+  // 处理roomJoined事件
+  const handleRoomJoined = (event) => {
+    console.log('收到roomJoined事件:', event.detail)
+    try {
+      if (!event.detail) {
+        console.error('roomJoined事件数据为空')
+        return
+      }
+
+      if (event.detail.status !== 'success') {
+        console.error('事件状态不是成功:', event.detail.status, event.detail.message)
+        return
+      }
+
+      // 更新房间数据
+      if (event.detail.data?.room) {
+        console.log('使用roomJoined事件中的房间数据更新本地房间数据')
+        setCurrentRoom(event.detail.data.room)
+
+        // 获取房间ID
+        const roomId = event.detail.data.room.id
+
+        // 导航到房间详情页
+        console.log(`成功加入房间，导航到房间详情页: /room/${roomId}`)
+
+        // 检查当前路径是否已经是房间详情页
+        const currentPath = router.currentRoute.value.path
+        const targetPath = `/room/${roomId}`
+
+        if (currentPath !== targetPath) {
+          // 使用setTimeout确保导航发生在事件处理完成后
+            router.push(targetPath)
+        } else {
+          console.log('已经在房间详情页，不需要导航')
+        }
+      } else {
+        console.warn('roomJoined事件中没有房间数据')
+      }
+
+      // 加载聊天历史
+      if (event.detail.data?.messages) {
+        loadMessages(event.detail.data.messages, true)
+      }
+    } catch (error) {
+      console.error('处理roomJoined事件时出错:', error)
+    }
+  }
+
+  // 处理roomLeft事件
+  const handleRoomLeft = (event) => {
+    console.log('收到roomLeft事件:', event.detail)
+    try {
+      if (!event.detail) {
+        console.error('roomLeft事件数据为空')
+        return
+      }
+
+      if (event.detail.status !== 'success') {
+        console.error('事件状态不是成功:', event.detail.status, event.detail.message)
+        return
+      }
+
+      console.log('当前用户离开房间，准备跳转')
+
+      // 清除玩家本地的 roomStore.currentRoom 缓存
+      console.log('清除本地房间缓存数据')
+      setCurrentRoom(null)
+
+      // 不再在离开房间时清除事件监听器
+      // 只在断开WebSocket连接时才清除事件监听器
+      console.log('离开房间时保留事件监听器，以便接收其他房间的事件')
+
+      // 跳转到上一个路由
+      const prevRoute = previousRoute.value || '/rooms'
+      console.log(`离开房间后跳转到上一个路由: ${prevRoute}`)
+
+      // 使用setTimeout确保跳转发生
+      setTimeout(() => {
+        router.push(prevRoute)
+      }, 100)
+
+      ElMessage.success('成功离开房间')
+    } catch (error) {
+      console.error('处理roomLeft事件时出错:', error)
+
+      // 即使出错，也尝试清除缓存
+      setCurrentRoom(null)
+    }
+  }
+
+  // 处理roleChanged事件
+  const handleRoleChanged = (event) => {
+    console.log('收到roleChanged事件:', event.detail)
+    if (event.detail && event.detail.status === 'success') {
+      // 如果是当前用户角色变更，不显示提示，因为在操作函数中已经显示了
+      const changedUserId = event.detail.data?.userId
+      if (changedUserId !== userStore.userId) {
+        ElMessage.success(event.detail.message || '角色已变更')
+      }
+
+      // 直接使用事件返回的房间数据更新房间状态
+      if (event.detail.data?.room) {
+        setCurrentRoom(event.detail.data.room)
+      }
+    }
+  }
+
+  // 处理roomStatusUpdate事件
+  const handleRoomStatusUpdate = (event) => {
+    console.log('收到roomStatusUpdate事件:', event.detail)
+    if (event.detail && event.detail.roomId && currentRoom.value) {
+      if (event.detail.roomId === currentRoom.value.id) {
+        // 更新房间状态
+        currentRoom.value.status = event.detail.status
+        // 重新获取房间详情
+        fetchRoomDetail(event.detail.roomId)
+      }
+    }
+  }
+
+  // 处理spectatorJoined事件
+  const handleSpectatorJoined = (event) => {
+    console.log('收到spectatorJoined事件:', event.detail)
+    if (event.detail && currentRoom.value) {
+      // 确保观众列表存在
+      if (!currentRoom.value.spectators) {
+        currentRoom.value.spectators = []
+      }
+      // 添加新观众
+      currentRoom.value.spectators.push(event.detail)
+    }
+  }
+
+  // 处理playerJoined事件
+  const handlePlayerJoined = (event) => {
+    console.log('收到playerJoined事件:', event.detail)
+    if (event.detail && currentRoom.value) {
+      // 确保玩家列表存在
+      if (!currentRoom.value.players) {
+        currentRoom.value.players = []
+      }
+      // 添加新玩家
+      currentRoom.value.players.push(event.detail)
+    }
+  }
+
+  // 处理spectatorLeft事件
+  const handleSpectatorLeft = (event) => {
+    console.log('收到spectatorLeft事件:', event.detail)
+    if (event.detail && event.detail.userId && currentRoom.value && currentRoom.value.spectators) {
+      // 从观众列表中移除该用户
+      currentRoom.value.spectators = currentRoom.value.spectators.filter(
+        spectator => spectator.userId !== event.detail.userId
+      )
+    }
+  }
+
+  // 处理playerLeft事件
+  const handlePlayerLeft = (event) => {
+    console.log('收到playerLeft事件:', event.detail)
+    if (event.detail && event.detail.userId && currentRoom.value && currentRoom.value.players) {
+      // 从玩家列表中移除该用户
+      currentRoom.value.players = currentRoom.value.players.filter(
+        player => player.userId !== event.detail.userId
+      )
+    }
+  }
+
+  // 处理spectatorMoveToPlayer事件
+  const handleSpectatorMoveToPlayer = (event) => {
+    console.log('收到spectatorMoveToPlayer事件:', event.detail)
+    if (event.detail && event.detail.userId && currentRoom.value) {
+      // 从观众列表中移除该用户
+      if (currentRoom.value.spectators) {
+        currentRoom.value.spectators = currentRoom.value.spectators.filter(
+          spectator => spectator.userId !== event.detail.userId
+        )
+      }
+      // 添加到玩家列表
+      if (!currentRoom.value.players) {
+        currentRoom.value.players = []
+      }
+      currentRoom.value.players.push(event.detail)
+    }
+  }
+
+  // 处理playerMoveToSpectator事件
+  const handlePlayerMoveToSpectator = (event) => {
+    console.log('收到playerMoveToSpectator事件:', event.detail)
+    if (event.detail && event.detail.userId && currentRoom.value) {
+      // 从玩家列表中移除该用户
+      if (currentRoom.value.players) {
+        currentRoom.value.players = currentRoom.value.players.filter(
+          player => player.userId !== event.detail.userId
+        )
+      }
+      // 添加到观众列表
+      if (!currentRoom.value.spectators) {
+        currentRoom.value.spectators = []
+      }
+      currentRoom.value.spectators.push(event.detail)
+    }
+  }
+
+  // 处理gameStarted事件
+  const handleGameStarted = (event) => {
+    console.log('收到gameStarted事件:', event.detail)
+    if (event.detail && currentRoom.value) {
+      // 更新房间状态
+      currentRoom.value.status = 'gaming'
+      // 更新队伍和玩家信息
+      if (event.detail.teams) {
+        currentRoom.value.teams = event.detail.teams
+      }
+      if (event.detail.players) {
+        currentRoom.value.players = event.detail.players
+      }
+      if (event.detail.nextTeamPick) {
+        currentRoom.value.nextTeamPick = event.detail.nextTeamPick
+      }
+    }
+  }
+
+  // 处理teamUpdate事件
+  const handleTeamUpdate = (event) => {
+    console.log('收到teamUpdate事件:', event.detail)
+    if (event.detail && event.detail.teamId && currentRoom.value && currentRoom.value.teams) {
+      // 更新队伍状态
+      const team = currentRoom.value.teams.find(t => t.id === event.detail.teamId)
+      if (team) {
+        if (event.detail.captainId) {
+          team.captainId = event.detail.captainId
+        }
+        if (event.detail.players) {
+          team.players = event.detail.players
+        }
+        if (event.detail.side) {
+          team.side = event.detail.side
+        }
+      }
+    }
+  }
+
+  // 处理newMessage事件
+  const handleNewMessage = (event) => {
+    console.log('收到newMessage事件（在room.js中）:', event.detail)
+    if (event.detail) {
+      // 添加新消息到消息列表
+      addMessage(event.detail)
+    }
+  }
+
+  // 处理socketError事件
+  const handleSocketError = (event) => {
+    console.error('收到socketError事件:', event.detail)
+    if (event.detail && event.detail.message) {
+      ElMessage.error(event.detail.message)
+
+      // 根据错误代码执行不同操作
+      if (event.detail.code === 3001) { // 房间不存在
+        router.push('/rooms')
+      } else if (event.detail.code === 3003) { // 用户不在房间中
+        fetchRoomDetail(currentRoom.value?.id)
+      } else if (event.detail.code === 3004 || (event.detail.message && event.detail.message.includes('密码'))) { // 密码错误
+        // 这里不处理密码错误，由组件处理
+      } else if (event.detail.code === 3005) { // 玩家列表已满
+        ElMessage.warning('玩家列表已满，无法加入')
+      }
+    }
+  }
+
+  // 处理socketReconnected事件
+  const handleSocketReconnected = (event) => {
+    console.log('收到socketReconnected事件:', event.detail)
+    if (event.detail && event.detail.roomId) {
+      // 在WebSocket重连后，刷新房间数据
+      console.log(`WebSocket重连后刷新房间数据，房间ID: ${event.detail.roomId}`)
+
+      // 刷新房间数据，但不自动加入房间
+      fetchRoomDetail(event.detail.roomId)
+    }
+  }
+
+  // 处理语音通信相关事件
+  const handleVoiceChannelJoined = (event) => {
+    console.log('收到voiceChannelJoined事件:', event.detail)
+    if (event.detail && event.detail.status === 'success') {
+      // 更新当前语音房间
+      const channel = event.detail.data?.channel
+      if (channel) {
+        ElMessage.success(`成功加入${channel === 'public' ? '公共' : (channel === 'team1' ? '一队' : '二队')}语音房间`)
+      }
+    }
+  }
+
+  const handleVoiceChannelLeft = (event) => {
+    console.log('收到voiceChannelLeft事件:', event.detail)
+  }
+
+  const handleVoiceChannelUsers = (event) => {
+    console.log('收到voiceChannelUsers事件:', event.detail)
+    if (event.detail && event.detail.channel && Array.isArray(event.detail.users)) {
+      updateVoiceChannelUsers(event.detail.channel, event.detail.users)
+    }
+  }
+
+  const handleUserJoinedVoiceChannel = (event) => {
+    console.log('收到userJoinedVoiceChannel事件:', event.detail)
+    if (event.detail) {
+      addUserToVoiceChannel(event.detail)
+    }
+  }
+
+  const handleUserLeftVoiceChannel = (event) => {
+    console.log('收到userLeftVoiceChannel事件:', event.detail)
+    if (event.detail) {
+      removeUserFromVoiceChannel(event.detail)
+    }
+  }
+
+  const handleVoiceMuteUpdate = (event) => {
+    console.log('收到voiceMuteUpdate事件:', event.detail)
+    if (event.detail && event.detail.userId) {
+      updateUserMuteStatus(event.detail.userId, event.detail.isMuted, event.detail.channel)
+    }
+  }
+
+  const handleVoiceData = (event) => {
+    // 不输出日志，避免刷屏
+    if (event.detail && voiceInstance.value) {
+      voiceInstance.value.handleVoiceData(event.detail)
+    }
+  }
+
+  // 处理选人选边相关事件
+  const handlePlayerSelectedEvent = (event) => {
+    console.log('收到playerSelected事件:', event.detail)
+    if (event.detail && event.detail.status === 'success') {
+      const { teamId, playerId, playerName, playerAvatar } = event.detail.data
+
+      // 添加到已选择列表
+      pickedCharacters.value.push({
+        characterId: playerId,
+        characterName: playerName,
+        characterAvatar: playerAvatar,
+        teamId: teamId,
+        pickOrder: pickedCharacters.value.length + 1
+      })
+
+      // 更新选人进度
+      pickingPhase.value.currentPick = pickedCharacters.value.length + 1
+      pickingPhase.value.currentTeam = teamId === 1 ? 2 : 1 // 切换队伍
+
+      // 更新房间数据
+      if (event.detail.data.room) {
+        setCurrentRoom(event.detail.data.room)
+      }
+
+      // 显示提示
+      ElMessage.success(`${teamId}队选择了 ${playerName}`)
+    }
+  }
+
+  const handleTeamSelectedSideEvent = (event) => {
+    console.log('收到teamSelectedSide事件:', event.detail)
+    if (event.detail && event.detail.status === 'success') {
+      const { teamId, side } = event.detail.data
+
+      // 更新队伍选边信息
+      if (currentRoom.value && currentRoom.value.teams) {
+        const team = currentRoom.value.teams.find(t => t.id === teamId)
+        if (team) {
+          team.side = side
+        }
+
+        // 设置另一个队伍的边
+        const otherTeam = currentRoom.value.teams.find(t => t.id !== teamId)
+        if (otherTeam) {
+          otherTeam.side = side === 'red' ? 'blue' : 'red'
+        }
+      }
+
+      // 更新房间状态
+      if (event.detail.data.room) {
+        setCurrentRoom(event.detail.data.room)
+      }
+
+      // 显示提示
+      ElMessage.success(`${teamId}队选择了${side === 'red' ? '红' : '蓝'}方`)
+    }
+  }
+
+  // 检查事件监听器状态
+  const areEventListenersActive = () => {
+    return eventListenersActive.value
+  }
+
   return {
     // 状态 - 房间列表相关
     rooms,
@@ -1646,6 +2044,11 @@ export const useRoomStore = defineStore('room', () => {
     error,
     pagination,
     previousRoute,
+
+    // 事件监听器相关
+    setupRoomEventListeners,
+    cleanupRoomEventListeners,
+    areEventListenersActive,
 
     // 状态 - 房间详情相关
     selectedCharacter,

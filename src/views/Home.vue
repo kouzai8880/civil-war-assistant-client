@@ -159,24 +159,24 @@ const joinRoomWithPassword = async (roomId, password) => {
       }
     }
 
-    // 使用REST API加入房间
-    console.log(`使用REST API加入房间 ${roomId}`, password ? '带密码' : '无密码')
+    // 使用WebSocket加入房间
+    console.log(`使用WebSocket加入房间 ${roomId}`, password ? '带密码' : '无密码')
 
-    // 无论有没有密码，都使用REST API加入房间
+    // 无论有没有密码，都使用WebSocket加入房间
     const success = await roomStore.joinRoom(roomId, password)
     if (!success) {
       throw new Error(roomStore.error || '加入房间失败')
     }
 
-    // 不再等待WebSocket事件，直接跳转到房间详情页
-    // 如果需要房间数据，可以在房间详情页中加载
-    console.log('加入房间成功，准备跳转到房间详情页')
+    // 等待roomJoined事件处理跳转到房间详情页
+    console.log('加入房间成功，等待roomJoined事件处理跳转')
 
     ElMessage.success('成功加入房间')
     // 关闭密码对话框
     showPasswordDialog.value = false
-    // 导航到房间详情页
-    router.push(`/room/${roomId}`)
+
+    // 不再手动跳转，由roomJoined事件处理跳转
+    // router.push(`/room/${roomId}`)
   } catch (error) {
     console.error('加入房间失败:', error)
     ElMessage.error(error.message || '加入房间失败，请稍后重试')

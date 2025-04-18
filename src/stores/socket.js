@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getSocket as getSocketService, connectSocket, disconnectSocket, lobbyApi, roomApi, voiceApi } from '../services/socket'
 import { useUserStore } from './user'
+import { useRoomStore } from './room'
 
 /**
  * WebSocket连接状态管理
@@ -65,6 +66,16 @@ export const useSocketStore = defineStore('socket', () => {
 
       connected.value = true
       setupEventListeners()
+
+      // 确保room.js中的事件监听器也被设置
+      const roomStore = useRoomStore()
+      if (roomStore && typeof roomStore.setupRoomEventListeners === 'function') {
+        console.log('在WebSocket连接成功后设置房间事件监听器')
+        roomStore.setupRoomEventListeners()
+      } else {
+        console.log('无法获取roomStore或setupRoomEventListeners函数不存在')
+      }
+
       return true
     } catch (err) {
       console.error('WebSocket连接失败:', err.message)
@@ -99,6 +110,13 @@ export const useSocketStore = defineStore('socket', () => {
 
     // 移除所有监听器
     cleanupListeners()
+
+    // 清除room.js中的事件监听器
+    const roomStore = useRoomStore()
+    if (roomStore && typeof roomStore.cleanupRoomEventListeners === 'function') {
+      console.log('在断开WebSocket连接时清除房间事件监听器')
+      roomStore.cleanupRoomEventListeners()
+    }
 
     // 断开连接
     disconnectSocket()
@@ -174,15 +192,15 @@ export const useSocketStore = defineStore('socket', () => {
         setTimeout(() => {
           console.log('发送joinRoom事件，确保事件监听器已经添加')
           // 添加回调函数，处理房间已满的情况
-          socket.emit('joinRoom', joinData)/*, (response) => {
-            // console.log('joinRoom响应:', response)
+          socket.emit('joinRoom', joinData, (response) => {
+            console.log('joinRoom响应:', response)
 
-            // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
-            // if (response.status === 'error' &&
-            //     (response.message.includes('已满') || response.message.includes('full'))) {
-            //   joinAsSpectator(roomId)
-            // }
-          })*/
+           // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
+            if (response.status === 'error' &&
+                (response.message.includes('已满') || response.message.includes('full'))) {
+              joinAsSpectator(roomId)
+            }
+          })
         }, 100) // 添加100毫秒的延迟，确保事件监听器有足够的时间添加
 
         // 不立即设置currentRoomId，等待roomJoined事件
@@ -398,6 +416,16 @@ export const useSocketStore = defineStore('socket', () => {
       isInLobby.value = false
       voiceEnabled.value = false
       isMuted.value = false
+
+      // 清除room.js中的事件监听器
+      const roomStore = useRoomStore()
+      if (roomStore && typeof roomStore.cleanupRoomEventListeners === 'function') {
+        console.log('[WebSocket] 在连接断开时清除房间事件监听器')
+        roomStore.cleanupRoomEventListeners()
+      }
+
+      // 设置事件监听器状态为非激活
+      setEventListenersActive(false)
     })
 
     on('error', (err) => {
@@ -426,6 +454,19 @@ export const useSocketStore = defineStore('socket', () => {
         try {
           // 使用新的事件监听器状态管理机制
           console.log('[WebSocket] 事件监听器状态:', eventListenersActive.value ? '激活' : '非激活')
+
+          // 确保事件监听器处于激活状态
+          if (!eventListenersActive.value) {
+            console.log('[WebSocket] 事件监听器未激活，正在激活...')
+            setEventListenersActive(true)
+          }
+
+          // 确保room.js中的事件监听器也被设置
+          const roomStore = useRoomStore()
+          if (roomStore && typeof roomStore.setupRoomEventListeners === 'function') {
+            console.log('[WebSocket] 在roomJoined事件中确保房间事件监听器已设置')
+            roomStore.setupRoomEventListeners()
+          }
 
           // 将事件缓存到全局状态
           eventCache.value.roomJoined = response

@@ -144,8 +144,10 @@ const enterRoom = (roomId) => {
   const isSpectator = room.spectators && room.spectators.some(spectator => spectator.userId === userStore.userId);
 
   if (isAlreadyInRoom || isSpectator) {
-    console.log('用户已在房间中，直接跳转到房间详情页');
-    router.push(`/room/${roomId}`);
+    console.log('用户已在房间中，发送joinRoom事件确保数据更新');
+    // 即使用户已在房间中，也发送joinRoom事件确保数据更新
+    // 跳转将由roomJoined事件处理
+    roomStore.joinRoom(roomId);
     return;
   }
 
@@ -153,11 +155,10 @@ const enterRoom = (roomId) => {
   try {
     // 调用API加入房间
     roomStore.joinRoom(roomId).then(success => {
-      if (success) {
-        router.push(`/room/${roomId}`);
-      } else {
+      if (!success) {
         ElMessage.error(roomStore.error || '加入房间失败');
       }
+      // 不再手动跳转，由roomJoined事件处理跳转
     });
   } catch (error) {
     console.error('加入房间失败:', error);

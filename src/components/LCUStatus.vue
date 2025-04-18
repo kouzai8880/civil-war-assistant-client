@@ -1,6 +1,6 @@
 <template>
   <div class="lcu-status">
-    <el-alert
+    <!-- <el-alert
       v-if="!connected"
       title="未连接到英雄联盟客户端"
       type="warning"
@@ -30,7 +30,7 @@
           <el-tag size="small" :type="gameStatusTagType">{{ gameStatus }}</el-tag>
         </div>
       </template>
-    </el-alert>
+    </el-alert> -->
   </div>
 </template>
 

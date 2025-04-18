@@ -883,17 +883,6 @@ export const useRoomStore = defineStore('room', () => {
   // 切换语音状态
   const toggleVoice = () => {
     hasJoinedVoice.value = !hasJoinedVoice.value
-
-    // 添加系统消息
-    if (hasJoinedVoice.value) {
-      if (roomData.value.status === 'waiting') {
-       //addSystemMessage(`${userStore.username} 加入了语音聊天`)
-      } else {
-       //addSystemMessage(`${userStore.username} 加入了${activeVoiceTeam.value === 1 ? '一' : '二'}队语音聊天`)
-      }
-    } else {
-     //addSystemMessage(`${userStore.username} 离开了语音聊天`)
-    }
   }
 
   // 格式化日期时间
@@ -1010,24 +999,24 @@ export const useRoomStore = defineStore('room', () => {
       currentRoom.value = roomData
     }
 
-    // 确保关键属性总是有值，防止前端报错
-    if (currentRoom.value) {
-      // 处理嵌套的房间数据结构
-      if (currentRoom.value.room) {
-        // 将房间的关键属性复制到顶层，确保一致性
-        currentRoom.value.creatorId = currentRoom.value.room.creatorId
-        currentRoom.value.creatorName = currentRoom.value.room.creatorName
-        currentRoom.value.creatorAvatar = currentRoom.value.room.creatorAvatar
-        currentRoom.value.name = currentRoom.value.room.name
-        currentRoom.value.id = currentRoom.value.room.id
-        currentRoom.value.status = currentRoom.value.room.status
-      }
+    // // 确保关键属性总是有值，防止前端报错
+    // if (currentRoom.value) {
+    //   // 处理嵌套的房间数据结构
+    //   if (currentRoom.value.room) {
+    //     // 将房间的关键属性复制到顶层，确保一致性
+    //     currentRoom.value.creatorId = currentRoom.value.room.creatorId
+    //     currentRoom.value.creatorName = currentRoom.value.room.creatorName
+    //     currentRoom.value.creatorAvatar = currentRoom.value.room.creatorAvatar
+    //     currentRoom.value.name = currentRoom.value.room.name
+    //     currentRoom.value.id = currentRoom.value.room.id
+    //     currentRoom.value.status = currentRoom.value.room.status
+    //   }
 
-      currentRoom.value.players = currentRoom.value.players || []
-      currentRoom.value.teams = currentRoom.value.teams || []
-      currentRoom.value.spectators = currentRoom.value.spectators || []
-      currentRoom.value.messages = currentRoom.value.messages || []
-    }
+    //   currentRoom.value.players = currentRoom.value.players || []
+    //   currentRoom.value.teams = currentRoom.value.teams || []
+    //   currentRoom.value.spectators = currentRoom.value.spectators || []
+    //   currentRoom.value.messages = currentRoom.value.messages || []
+    // }
   }
 
   // 监听房间相关事件
@@ -1721,7 +1710,6 @@ export const useRoomStore = defineStore('room', () => {
     switchChatChannel,
     switchVoiceTeam,
     toggleVoice,
-   //addSystemMessage,
     formatChatMessage,
     formatDateTime,
     teamColor,

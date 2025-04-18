@@ -174,15 +174,15 @@ export const useSocketStore = defineStore('socket', () => {
         setTimeout(() => {
           console.log('发送joinRoom事件，确保事件监听器已经添加')
           // 添加回调函数，处理房间已满的情况
-          socket.emit('joinRoom', joinData, (response) => {
-            console.log('joinRoom响应:', response)
+          socket.emit('joinRoom', joinData)/*, (response) => {
+            // console.log('joinRoom响应:', response)
 
             // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
-            if (response.status === 'error' &&
-                (response.message.includes('已满') || response.message.includes('full'))) {
-              joinAsSpectator(roomId)
-            }
-          })
+            // if (response.status === 'error' &&
+            //     (response.message.includes('已满') || response.message.includes('full'))) {
+            //   joinAsSpectator(roomId)
+            // }
+          })*/
         }, 100) // 添加100毫秒的延迟，确保事件监听器有足够的时间添加
 
         // 不立即设置currentRoomId，等待roomJoined事件
@@ -241,17 +241,17 @@ export const useSocketStore = defineStore('socket', () => {
   }
 
   // 踢出玩家
-  const kickPlayer = (roomId, userId) => {
+  const kickPlayer = (roomId, userId, targetUserId) => {
     if (!connected.value) {
       error.value = 'WebSocket未连接，无法踢出玩家'
       return false
     }
 
     try {
-      console.log(`发送kickPlayer事件，踢出房间 ${roomId} 的玩家 ${userId}`)
+      console.log(`发送kickPlayer事件，用户 ${userId} 踢出房间 ${roomId} 的玩家 ${targetUserId}`)
       const socket = getSocket()
       if (socket) {
-        socket.emit('kickPlayer', { roomId, userId })
+        socket.emit('kickPlayer', { roomId, userId, targetUserId })
         return true
       } else {
         throw new Error('WebSocket实例不存在')

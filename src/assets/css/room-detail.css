@@ -147,10 +147,21 @@
   gap: 0.5rem;
   margin-left: auto;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .action-btn {
   font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 主要内容区域 */
@@ -359,67 +370,154 @@
   flex-direction: column;
   padding: 1rem;
   overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+/* 卡片头部样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 语音区域卡片头部特殊样式 */
+.voice-container .card-header {
+  flex-wrap: nowrap;
+  padding: 0.5rem 0;
 }
 
 .voice-controls {
   display: flex;
   gap: 0.5rem;
+  margin-left: auto;
+  align-items: center;
+}
+
+.btn-mic, .btn-speaker, .btn-voice {
+  border-radius: 4px;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #8b8fa3;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .btn-mic, .btn-speaker {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  border: none;
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #8b8fa3;
-  cursor: pointer;
-  transition: all 0.3s;
+  padding: 0;
+}
+
+.btn-voice {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-voice.active {
+  background-color: #f56c6c;
+}
+
+.btn-voice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-text {
+  margin-left: 0.5rem;
 }
 
 .btn-mic.active, .btn-speaker.active {
   background-color: #5f79fc;
   color: white;
+  box-shadow: 0 0 10px rgba(95, 121, 252, 0.5);
+}
+
+.btn-mic.active.muted {
+  background-color: #f56c6c;
+  box-shadow: 0 0 10px rgba(245, 108, 108, 0.5);
 }
 
 .voice-participants {
   flex: 1;
   overflow-y: auto;
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
   max-height: calc(100% - 100px); /* 留出空间给标题和按钮 */
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+}
+
+/* 空语音频道提示样式 */
+.empty-voice-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  color: #8b8fa3;
+  font-style: italic;
+  text-align: center;
+  margin: 0.5rem 0;
+  min-height: 80px;
 }
 
 .voice-participant {
   display: flex;
   align-items: center;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 8px;
   margin-bottom: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.voice-participant:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
 }
 
 .voice-participant.speaking {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(95, 121, 252, 0.1);
+  border-left: 3px solid #5f79fc;
 }
 
 .voice-avatar {
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 50%;
   margin-right: 0.75rem;
   object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .participant-name {
   flex: 1;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .voice-indicator {
-  width: 1rem;
-  height: 1rem;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
+  margin-right: 0.5rem;
 }
 
 .speaking .voice-indicator::before {
@@ -432,6 +530,7 @@
   background-color: #00cfa1;
   opacity: 0.8;
   animation: pulse 1.5s infinite;
+  box-shadow: 0 0 5px #00cfa1;
 }
 
 @keyframes pulse {
@@ -449,28 +548,61 @@
   }
 }
 
-.join-voice-btn {
-  display: block;
-  width: 100%;
-  padding: 0.75rem;
-  color: white;
-  border: none;
+.voice-muted-icon {
+  color: #f56c6c;
+  margin-right: 0.5rem;
+  filter: drop-shadow(0 0 2px rgba(245, 108, 108, 0.5));
+}
+
+/* 标题栏语音按钮样式 */
+.voice-btn, .mute-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.voice-btn:hover, .mute-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.mute-btn {
+  margin-left: 0.5rem;
+}
+
+/* 队伍语音选项卡样式 */
+.team-voice-tabs {
+  display: flex;
+  margin: 0.75rem 0;
+  background-color: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
-  font-weight: 500;
+  overflow: hidden;
+}
+
+.team-voice-tab {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.btn-primary {
-  background-color: #5f79fc;
+.team-voice-tab:last-child {
+  border-right: none;
 }
 
-.btn-danger {
-  background-color: #f56c6c;
+.team-voice-tab:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-.join-voice-btn:hover {
-  filter: brightness(1.1);
+.team-voice-tab.active {
+  background-color: rgba(95, 121, 252, 0.2);
+  color: #fff;
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 #5f79fc;
 }
 
 /* 玩家列表部分 */
@@ -594,7 +726,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.player-badge.creator {
+.player-badge.creator, .spectator-badge.creator {
   background: linear-gradient(135deg, #f56c6c, #e74c3c);
   color: white;
   font-weight: bold;
@@ -2037,9 +2169,12 @@
   color: #fff;
   font-size: 14px;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.creator-badge {
+.creator-badge, .spectator-badge {
   background-color: #ff9800;
   color: #000;
   padding: 2px 6px;

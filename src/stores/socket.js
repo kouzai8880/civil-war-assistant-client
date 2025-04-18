@@ -693,6 +693,13 @@ export const useSocketStore = defineStore('socket', () => {
     on('reconnect_failed', () => {
       console.error('[WebSocket] 重新连接失败，已达到最大重试次数')
     })
+
+    // 房间列表更新事件
+    on('roomListUpdated', (data) => {
+      console.log('[WebSocket] 房间列表更新:', data)
+      // 将事件分发给其他组件
+      window.dispatchEvent(new CustomEvent('roomListUpdated', { detail: data }))
+    })
   }
 
   // 注册事件监听

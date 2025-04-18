@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
@@ -76,12 +76,89 @@ const getChampionIcon = (index = 0) => {
   return `https://ddragon.leagueoflegends.com/cdn/13.12.1/img/champion/${champion}.png`
 }
 
+// 处理房间列表更新事件
+const handleRoomListUpdated = (event) => {
+  console.log('收到房间列表更新事件:', event.detail)
+  try {
+    if (!event.detail) return
+
+    const { action, roomId } = event.detail
+    console.log(`房间列表更新，动作: ${action}, 房间ID: ${roomId}`)
+
+    // 根据更新动作执行不同操作
+    switch (action) {
+      case 'create':
+      case 'update':
+        // 新房间创建或房间信息更新，刷新房间列表
+        throttledLoadRooms()
+        break
+      case 'delete':
+        // 房间被删除，从本地列表中移除
+        removeRoomFromList(roomId)
+        break
+      default:
+        // 未知动作，刷新整个列表
+        throttledLoadRooms()
+    }
+  } catch (error) {
+    console.error('处理房间列表更新事件时出错:', error)
+  }
+}
+
+// 使用节流函数限制请求频率
+let loadTimeout = null
+const throttledLoadRooms = () => {
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+  }
+
+  loadTimeout = setTimeout(() => {
+    loadRooms()
+    loadTimeout = null
+  }, 500) // 500ms内只执行一次
+}
+
+// 从本地列表中移除房间
+const removeRoomFromList = (roomId) => {
+  if (!roomId || !rooms.value) return
+
+  // 从房间列表中移除指定房间
+  rooms.value = rooms.value.filter(room => room.id !== roomId)
+  console.log(`从本地列表中移除房间 ${roomId}`)
+}
+
 // 是否显示创建对话框
 onMounted(() => {
   if (route.query.action === 'create') {
     showCreateRoomModal.value = true
   }
   loadRooms()
+
+  // 添加房间列表更新事件监听器
+  window.addEventListener('roomListUpdated', handleRoomListUpdated)
+
+  // 确保 WebSocket 连接
+  const socketStore = useSocketStore()
+  if (!socketStore.isConnected) {
+    console.log('WebSocket未连接，尝试连接...')
+    socketStore.connect().then(() => {
+      console.log('WebSocket连接成功，可以接收房间列表更新通知')
+    }).catch(error => {
+      console.error('WebSocket连接失败:', error)
+    })
+  }
+})
+
+// 组件卸载时移除事件监听器
+onUnmounted(() => {
+  // 移除房间列表更新事件监听器
+  window.removeEventListener('roomListUpdated', handleRoomListUpdated)
+
+  // 清除节流定时器
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+    loadTimeout = null
+  }
 })
 
 // 加载房间列表

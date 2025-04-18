@@ -607,7 +607,6 @@ function initSocketServer(server) {
           data: {
             room: formattedRoom,
             role: 'player',
-            teamId
           },
           message: '已加入玩家列表'
         });

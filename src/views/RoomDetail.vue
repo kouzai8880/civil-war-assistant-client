@@ -5,7 +5,9 @@ import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useSocketStore } from '../stores/socket'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, MuteNotification } from '@element-plus/icons-vue'
+import { Delete, MuteNotification, CircleClose, Headset } from '@element-plus/icons-vue'
+
+// 组件初始化
 
 const router = useRouter()
 const route = useRoute()
@@ -170,6 +172,50 @@ const championIcons = [
 const getChampionIcon = (index) => {
   const champion = championIcons[index % championIcons.length]
   return `https://ddragon.leagueoflegends.com/cdn/13.12.1/img/champion/${champion}.png`
+}
+
+// 获取语音用户的名称
+const getPlayerName = (user) => {
+  if (!user) return '未知用户'
+
+  // 如果用户对象已经有用户名，直接返回
+  if (user.username) return user.username
+
+  // 否则尝试从玩家列表中查找
+  const player = players.value.find(p => p.userId === user.userId)
+  if (player) return player.username
+
+  // 如果在玩家列表中找不到，尝试从观众列表中查找
+  const spectator = spectators.value.find(s => s.userId === user.userId)
+  if (spectator) return spectator.username
+
+  // 如果都找不到，返回默认值
+  return '未知用户'
+}
+
+// 获取语音用户的头像
+const getPlayerAvatar = (user) => {
+  if (!user) return ''
+
+  // 如果用户对象已经有头像，直接返回
+  if (user.avatar) return user.avatar
+
+  // 否则尝试从玩家列表中查找
+  const playerIndex = players.value.findIndex(p => p.userId === user.userId)
+  if (playerIndex !== -1) {
+    const player = players.value[playerIndex]
+    return player.avatar || getChampionIcon(playerIndex + 9)
+  }
+
+  // 如果在玩家列表中找不到，尝试从观众列表中查找
+  const spectatorIndex = spectators.value.findIndex(s => s.userId === user.userId)
+  if (spectatorIndex !== -1) {
+    const spectator = spectators.value[spectatorIndex]
+    return spectator.avatar || getChampionIcon(spectatorIndex + 15)
+  }
+
+  // 如果都找不到，返回默认头像
+  return getChampionIcon(10)
 }
 
 // 已选择的玩家
@@ -668,6 +714,10 @@ onMounted(async () => {
     return
   }
 
+  // 确保默认显示公共语音频道
+  if (roomStore.currentVoiceChannel !== 'public' && roomStore.currentVoiceChannel !== 'team1' && roomStore.currentVoiceChannel !== 'team2') {
+    roomStore.currentVoiceChannel = 'public'
+  }
 
   if (!roomStore.previousRoute || roomStore.previousRoute === '')
     roomStore.previousRoute = '/rooms'
@@ -1102,44 +1152,86 @@ const sendMessage = () => {
 
 // 切换语音状态
 const toggleVoice = async () => {
+  console.log('[语音切换] 开始切换语音状态...')
+  console.log('[语音切换] 当前语音状态:', roomStore.hasJoinedVoice ? '已加入' : '未加入')
+  console.log('[语音切换] 当前语音频道:', roomStore.currentVoiceChannel)
+
   if (!roomData.value || !roomData.value.id) {
-    console.error('无法切换语音状态：房间数据不存在')
+    console.error('[语音切换] 无法切换语音状态：房间数据不存在')
     return
   }
 
   try {
     // 如果已经加入语音，则离开
     if (roomStore.hasJoinedVoice) {
+      console.log('[语音切换] 当前已加入语音，准备离开...')
       roomStore.leaveVoiceChannel()
+      console.log('[语音切换] 已离开语音频道')
     } else {
       // 否则加入语音
+      console.log('[语音切换] 当前未加入语音，准备加入...')
+
       // 初始化语音通信
-      await roomStore.initVoiceCommunication()
+      console.log('[语音切换] 调用 initVoiceCommunication...')
+      const initResult = await roomStore.initVoiceCommunication()
+      console.log('[语音切换] 初始化结果:', initResult ? '成功' : '失败')
+
+      if (!initResult) {
+        throw new Error('语音通信初始化失败')
+      }
 
       // 根据当前状态决定加入哪个语音房间
       let channel = 'public'
       if (roomData.value.status !== 'waiting' && roomStore.userTeamId) {
         channel = roomStore.userTeamId === 1 ? 'team1' : 'team2'
       }
+      console.log(`[语音切换] 准备加入语音频道: ${channel}`)
 
       // 加入语音房间
       roomStore.joinVoiceChannel(channel)
+      console.log(`[语音切换] 已发送加入语音频道请求: ${channel}`)
+
+      // 注意：joinVoiceChannel已经设置了hasJoinedVoice为true，不需要再调用toggleVoice
+      // roomStore.toggleVoice()
+      console.log('[语音切换] 语音状态已设置为已加入')
     }
+
+    // 输出当前语音状态
+    console.log('[语音切换] 当前语音状态:', roomStore.hasJoinedVoice ? '已加入' : '未加入')
+    console.log('[语音切换] 当前语音频道:', roomStore.currentVoiceChannel)
   } catch (error) {
-    console.error('切换语音状态失败:', error)
-    ElMessage.error('切换语音状态失败')
+    console.error('[语音切换] 切换语音状态失败:', error)
+    ElMessage.error('切换语音状态失败: ' + error.message)
   }
 }
 
 // 切换静音状态
 const toggleMute = () => {
-  if (!roomData.value || !roomData.value.id || !roomStore.hasJoinedVoice) {
-    console.error('无法切换静音状态：未加入语音房间')
+  console.log('[语音静音UI] 开始切换静音状态...')
+  console.log('[语音静音UI] 当前静音状态:', roomStore.isMuted ? '已静音' : '未静音')
+  console.log('[语音静音UI] 当前语音状态:', roomStore.hasJoinedVoice ? '已加入' : '未加入')
+  console.log('[语音静音UI] 当前语音频道:', roomStore.currentVoiceChannel)
+
+  if (!roomData.value || !roomData.value.id) {
+    console.error('[语音静音UI] 无法切换静音状态：房间数据不存在')
     return
   }
 
-  // 切换静音状态
-  roomStore.toggleMute()
+  if (!roomStore.hasJoinedVoice) {
+    console.error('[语音静音UI] 无法切换静音状态：未加入语音房间')
+    return
+  }
+
+  try {
+    // 切换静音状态
+    console.log('[语音静音UI] 调用 roomStore.toggleMute()...')
+    const result = roomStore.toggleMute()
+    console.log(`[语音静音UI] toggleMute 返回结果: ${result ? '成功' : '失败'}`)
+    console.log('[语音静音UI] 新静音状态:', roomStore.isMuted ? '已静音' : '未静音')
+  } catch (error) {
+    console.error('[语音静音UI] 切换静音状态失败:', error)
+    ElMessage.error('切换静音状态失败')
+  }
 }
 
 // 切换侧边栏状态 - 已移除
@@ -1168,6 +1260,8 @@ const switchVoiceChannel = (channel) => {
   // 切换语音频道
   roomStore.switchVoiceChannel(channel)
 }
+
+
 
 // 房间状态文本
 const statusText = (status) => {
@@ -1599,7 +1693,10 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 <div class="spectators-sidebar-list">
                   <div v-for="(spectator, index) in spectators" :key="spectator.userId" class="spectator-sidebar-item">
                     <img :src="spectator.avatar || getChampionIcon(index + 15)" alt="观众头像" class="spectator-avatar">
-                    <span class="spectator-name">{{ spectator.username }}</span>
+                    <span class="spectator-name">
+                      {{ spectator.username }}
+                      <span v-if="spectator.userId === roomData.creatorId" class="spectator-badge creator">房主</span>
+                    </span>
                     <!-- 添加踢出按钮 -->
                     <el-button
                       v-if="isCreator && spectator.userId !== userStore.userId"
@@ -1622,11 +1719,27 @@ const refreshRoomDetail = async (autoJoin = false) => {
               <div class="voice-container">
                 <div class="card-header">
                   <h2 class="section-title">
-                    {{ roomStore.currentVoiceChannel === 'public' ? '公共语音' :
-                       roomStore.currentVoiceChannel === 'team1' ? '一队语音' : '二队语音' }}
+                    {{ roomStore.currentVoiceChannel === 'team1' ? '一队语音' :
+                       roomStore.currentVoiceChannel === 'team2' ? '二队语音' : '公共语音' }}
                   </h2>
                   <div class="voice-controls">
+                    <!-- 加入/退出语音按钮 -->
                     <button
+                      class="btn-voice"
+                      :class="{
+                        'active': roomStore.hasJoinedVoice
+                      }"
+                      @click="toggleVoice"
+                    >
+                      <i class="el-icon">
+                        <component :is="roomStore.hasJoinedVoice ? 'CircleClose' : 'Headset'"></component>
+                      </i>
+                      <span class="btn-text">{{ roomStore.hasJoinedVoice ? '退出语音' : '加入语音' }}</span>
+                    </button>
+
+                    <!-- 静音按钮，只在已加入语音时显示 -->
+                    <button
+                      v-if="roomStore.hasJoinedVoice"
                       class="btn-mic"
                       :class="{
                         'active': roomStore.hasJoinedVoice,
@@ -1669,8 +1782,8 @@ const refreshRoomDetail = async (autoJoin = false) => {
                 </div>
 
                 <div class="voice-participants">
-                  <!-- 当前用户 -->
-                  <div class="voice-participant" :class="{'speaking': roomStore.hasJoinedVoice}">
+                  <!-- 当前用户，只有在已加入语音时才显示 -->
+                  <div v-if="roomStore.hasJoinedVoice" class="voice-participant speaking">
                     <img :src="userStore.avatar || getChampionIcon(8)" alt="您的头像" class="voice-avatar">
                     <span class="participant-name">{{ userStore.username }} (您)</span>
                     <div class="voice-indicator"></div>
@@ -1681,26 +1794,26 @@ const refreshRoomDetail = async (autoJoin = false) => {
 
                   <!-- 其他语音参与者 -->
                   <div
-                    v-for="user in roomStore.currentVoiceUsers"
+                    v-for="user in (roomStore.currentVoiceUsers || []).filter(u => u.userId !== userStore.userId)"
                     :key="user.userId"
                     class="voice-participant speaking"
                   >
-                    <img :src="user.avatar || getChampionIcon(10)" :alt="user.username" class="voice-avatar">
-                    <span class="participant-name">{{ user.username }}</span>
+                    <img :src="user.avatar || getPlayerAvatar(user)" :alt="getPlayerName(user)" class="voice-avatar">
+                    <span class="participant-name">
+                      {{ getPlayerName(user) }}
+                      <span v-if="user.userId === roomData.creatorId" class="player-badge creator">房主</span>
+                    </span>
                     <div class="voice-indicator"></div>
                     <i v-if="user.isMuted" class="el-icon voice-muted-icon">
                       <MuteNotification />
                     </i>
                   </div>
-                </div>
 
-                <button
-                  class="btn join-voice-btn"
-                  :class="roomStore.hasJoinedVoice ? 'btn-danger' : 'btn-primary'"
-                  @click="toggleVoice"
-                >
-                  {{ roomStore.hasJoinedVoice ? '退出语音' : '加入语音' }}
-                </button>
+                  <!-- 当没有人加入语音时显示提示 -->
+                  <div v-if="!roomStore.hasJoinedVoice && (roomStore.currentVoiceUsers || []).length === 0" class="empty-voice-message">
+                    暂无用户加入语音频道
+                  </div>
+                </div>
               </div>
             </div>
 

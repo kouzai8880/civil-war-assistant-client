@@ -669,41 +669,13 @@ onMounted(async () => {
     return
   }
 
-  // 记录进入房间前的路由
-  // 如果是从房间列表页面进入，记录为 /rooms
-  // 如果是从首页进入，记录为 /
-  // 如果是从其他页面进入，记录为实际的路由
-  if (route.from && route.from.path) {
-    // 如果有from路由，使用from路由
-    roomStore.previousRoute = route.from.path;
-    console.log(`记录上一个路由（from）: ${route.from.path}`);
-  } else if (document.referrer) {
-    // 如果没有from路由，尝试使用referrer
-    try {
-      const referrerUrl = new URL(document.referrer);
-      const path = referrerUrl.pathname;
-      if (path && path !== route.path) {
-        roomStore.previousRoute = path;
-        console.log(`记录上一个路由（referrer）: ${path}`);
-      } else {
-        roomStore.previousRoute = '/rooms';
-        console.log('无法获取有效的referrer，默认设置为 /rooms');
-      }
-    } catch (e) {
-      roomStore.previousRoute = '/rooms';
-      console.log('解析referrer出错，默认设置为 /rooms');
-    }
-  } else {
-    // 如果都没有，默认设置为 /rooms
-    roomStore.previousRoute = '/rooms';
-    console.log('无法获取上一个路由，默认设置为 /rooms');
-  }
+
+  if (!roomStore.previousRoute || roomStore.previousRoute === '')
+    roomStore.previousRoute = '/rooms'
 
   isLoading.value = true
 
   try {
-    // 不再需要在这里设置房间事件监听器，因为已经在socket.js中设置了
-    console.log('事件监听器状态:', roomStore.areEventListenersActive() ? '激活' : '非激活')
 
     // 确保WebSocket连接
     if (!socketStore.isConnected) {

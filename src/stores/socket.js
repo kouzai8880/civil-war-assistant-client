@@ -187,21 +187,17 @@ export const useSocketStore = defineStore('socket', () => {
       // 直接使用socket发送事件，而不是通过API
       const socket = getSocket()
       if (socket) {
-        // 添加延迟，确保事件监听器有足够的时间添加
-        // 这对于第二次进入房间很重要，因为事件监听器可能还没有添加完成
-        setTimeout(() => {
-          console.log('发送joinRoom事件，确保事件监听器已经添加')
-          // 添加回调函数，处理房间已满的情况
-          socket.emit('joinRoom', joinData, (response) => {
-            console.log('joinRoom响应:', response)
+        console.log('发送joinRoom事件，确保事件监听器已经添加')
+        // 添加回调函数，处理房间已满的情况
+        socket.emit('joinRoom', joinData, (response) => {
+          console.log('joinRoom响应:', response)
 
-           // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
-            if (response.status === 'error' &&
-                (response.message.includes('已满') || response.message.includes('full'))) {
-              joinAsSpectator(roomId)
-            }
-          })
-        }, 100) // 添加100毫秒的延迟，确保事件监听器有足够的时间添加
+          // 如果加入房间失败，并且原因是房间已满，则自动尝试加入观战席
+          if (response.status === 'error' &&
+              (response.message.includes('已满') || response.message.includes('full'))) {
+            joinAsSpectator(roomId)
+          }
+      })
 
         // 不立即设置currentRoomId，等待roomJoined事件
         return true

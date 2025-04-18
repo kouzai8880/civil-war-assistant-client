@@ -1301,6 +1301,17 @@ export const useRoomStore = defineStore('room', () => {
     error.value = null
 
     try {
+      // 记录当前路由路径，作为离开房间后的返回路径
+      if (router && router.currentRoute && router.currentRoute.value) {
+        const currentPath = router.currentRoute.value.path
+        // 如果当前路径不是房间详情页，才记录
+        if (!currentPath.startsWith('/room/')) {
+          console.log(`记录当前路径作为返回路径: ${currentPath}`)
+          previousRoute.value = currentPath
+        } else {
+          console.log('当前已经在房间详情页，不记录返回路径')
+        }
+      }
 
       // 确保 WebSocket 已连接
       const socketStore = useSocketStore()
@@ -1318,7 +1329,7 @@ export const useRoomStore = defineStore('room', () => {
       }
 
       // 等待一下，给WebSocket事件处理时间
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // await new Promise(resolve => setTimeout(resolve, 100))
 
       // 不再重新获取房间详情，减少API调用
       // 房间详情页会自动加载最新数据

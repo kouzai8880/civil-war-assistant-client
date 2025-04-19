@@ -5,7 +5,7 @@ import { useUserStore } from '../stores/user'
 import { useRoomStore } from '../stores/room'
 import { useSocketStore } from '../stores/socket'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, MuteNotification, CircleClose, Headset } from '@element-plus/icons-vue'
+import { Delete, CircleClose, Headset, Mic, VideoPlay, VideoPause } from '@element-plus/icons-vue'
 
 // 组件初始化
 
@@ -157,6 +157,21 @@ const chatInput = ref('')
 
 
 // 语音相关状态已移至 roomStore
+// 音量控制相关变量
+// 麦克风音量，范围为0-100，对应roomStore中的0-1
+// 初始化为roomStore中的值 * 100
+const micVolumeValue = ref(roomStore.micVolume * 100)
+// 扬声器音量，范围为0-100，对应roomStore中的0-1
+// 初始化为roomStore中的值 * 100
+const speakerVolumeValue = ref(roomStore.speakerVolume * 100)
+// 音量控制面板显示状态
+const showSpeakerPanel = ref(false)
+const showMicPanel = ref(false)
+// 面板悬停状态
+const micPanelHovered = ref(false)
+const speakerPanelHovered = ref(false)
+// 模拟声音活动状态
+const isPlayingAudio = ref(true) // 默认为激活状态，可以根据实际声音活动来设置
 
 // 常用的英雄头像列表，用于随机分配给玩家
 const championIcons = [
@@ -1234,6 +1249,194 @@ const toggleMute = () => {
   }
 }
 
+// 注意：我们现在在鼠标释放时更新音量，不再需要这些函数
+
+// 开始拖动麦克风滑块
+const startDragMic = (event) => {
+  event.preventDefault()
+
+  // 获取轨道元素和尺寸信息
+  const track = event.target.closest('.slider-track')
+  if (track) {
+    micTrackRect = track.getBoundingClientRect()
+    micTrackHeight = micTrackRect.height
+
+    // 获取面板元素和尺寸信息
+    const panel = track.closest('.volume-panel')
+    if (panel) {
+      micPanelRect = panel.getBoundingClientRect()
+    }
+  }
+
+  // 添加鼠标移动和松开事件监听
+  document.addEventListener('mousemove', dragMic)
+  document.addEventListener('mouseup', stopDragMic)
+}
+
+// 拖动过程中只更新UI，不实际改变音量
+
+// 存储拖动开始时的轨道元素和尺寸信息
+let micTrackRect = null
+let micTrackHeight = 0
+let micPanelRect = null // 存储面板的矩形信息
+
+// 拖动麦克风滑块
+const dragMic = (event) => {
+  // 如果没有存储轨道信息，则返回
+  if (!micTrackRect || !micTrackHeight || !micPanelRect) return
+
+  // 检查鼠标是否在面板区域内
+  const isInsidePanel = (
+    event.clientX >= micPanelRect.left &&
+    event.clientX <= micPanelRect.right &&
+    event.clientY >= micPanelRect.top &&
+    event.clientY <= micPanelRect.bottom
+  )
+
+  // 如果鼠标离开面板区域，停止拖动
+  if (!isInsidePanel) {
+    stopDragMic()
+    return
+  }
+
+  const offsetY = event.clientY - micTrackRect.bottom
+
+  // 计算百分比位置 (0-100)
+  let percentage = Math.round((-offsetY / micTrackHeight) * 100)
+  // 限制在 0-100 范围内
+  percentage = Math.max(0, Math.min(100, percentage))
+
+  // 只更新UI显示，不实际改变音量
+  micVolumeValue.value = percentage
+}
+
+// 停止拖动麦克风滑块
+const stopDragMic = () => {
+  // 移除事件监听
+  document.removeEventListener('mousemove', dragMic)
+  document.removeEventListener('mouseup', stopDragMic)
+
+  // 清除轨道和面板信息
+  micTrackRect = null
+  micTrackHeight = 0
+  micPanelRect = null
+
+  // 鼠标释放时才实际更新音量
+  console.log('[语音音量] 麦克风音量最终变化:', micVolumeValue.value)
+  // 将范围为0-100的值转换为范围为0-1的值
+  const normalizedValue = micVolumeValue.value / 100
+  // 调用roomStore的setMicVolume方法
+  roomStore.setMicVolume(normalizedValue)
+}
+
+// 开始拖动扬声器滑块
+const startDragSpeaker = (event) => {
+  event.preventDefault()
+
+  // 获取轨道元素和尺寸信息
+  const track = event.target.closest('.slider-track')
+  if (track) {
+    speakerTrackRect = track.getBoundingClientRect()
+    speakerTrackHeight = speakerTrackRect.height
+
+    // 获取面板元素和尺寸信息
+    const panel = track.closest('.volume-panel')
+    if (panel) {
+      speakerPanelRect = panel.getBoundingClientRect()
+    }
+  }
+
+  // 添加鼠标移动和松开事件监听
+  document.addEventListener('mousemove', dragSpeaker)
+  document.addEventListener('mouseup', stopDragSpeaker)
+}
+
+// 存储拖动开始时的扬声器轨道元素和尺寸信息
+let speakerTrackRect = null
+let speakerTrackHeight = 0
+let speakerPanelRect = null // 存储面板的矩形信息
+
+// 拖动扬声器滑块
+const dragSpeaker = (event) => {
+  // 如果没有存储轨道信息，则返回
+  if (!speakerTrackRect || !speakerTrackHeight || !speakerPanelRect) return
+
+  // 检查鼠标是否在面板区域内
+  const isInsidePanel = (
+    event.clientX >= speakerPanelRect.left &&
+    event.clientX <= speakerPanelRect.right &&
+    event.clientY >= speakerPanelRect.top &&
+    event.clientY <= speakerPanelRect.bottom
+  )
+
+  // 如果鼠标离开面板区域，停止拖动
+  if (!isInsidePanel) {
+    stopDragSpeaker()
+    return
+  }
+
+  const offsetY = event.clientY - speakerTrackRect.bottom
+
+  // 计算百分比位置 (0-100)
+  let percentage = Math.round((-offsetY / speakerTrackHeight) * 100)
+  // 限制在 0-100 范围内
+  percentage = Math.max(0, Math.min(100, percentage))
+
+  // 只更新UI显示，不实际改变音量
+  speakerVolumeValue.value = percentage
+}
+
+// 停止拖动扬声器滑块
+const stopDragSpeaker = () => {
+  // 移除事件监听
+  document.removeEventListener('mousemove', dragSpeaker)
+  document.removeEventListener('mouseup', stopDragSpeaker)
+
+  // 清除轨道和面板信息
+  speakerTrackRect = null
+  speakerTrackHeight = 0
+  speakerPanelRect = null
+
+  // 鼠标释放时才实际更新音量
+  console.log('[语音音量] 扬声器音量最终变化:', speakerVolumeValue.value)
+  // 将范围为0-100的值转换为范围为0-1的值
+  const normalizedValue = speakerVolumeValue.value / 100
+  // 调用roomStore的setSpeakerVolume方法
+  roomStore.setSpeakerVolume(normalizedValue)
+}
+
+// 注意：我们现在使用自定义滑块，不再需要原来的handleMicVolumeChange和handleSpeakerVolumeChange方法
+
+// 处理麦克风按钮鼠标进入
+ const handleMicMouseEnter = () => {
+  showMicPanel.value = true
+}
+
+// 处理麦克风按钮鼠标离开
+const handleMicMouseLeave = () => {
+  // 延迟关闭，检查面板是否被悬停
+  setTimeout(() => {
+    if (!micPanelHovered.value) {
+      showMicPanel.value = false
+    }
+  }, 100)
+}
+
+// 处理扬声器按钮鼠标进入
+const handleSpeakerMouseEnter = () => {
+  showSpeakerPanel.value = true
+}
+
+// 处理扬声器按钮鼠标离开
+const handleSpeakerMouseLeave = () => {
+  // 延迟关闭，检查面板是否被悬停
+  setTimeout(() => {
+    if (!speakerPanelHovered.value) {
+      showSpeakerPanel.value = false
+    }
+  }, 100)
+}
+
 // 切换侧边栏状态 - 已移除
 // const toggleSidebar = () => {
 //   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -1752,7 +1955,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                       style="display: flex; align-items: center; justify-content: center; height: 32px; width: 36px;"
                     >
                       <i class="el-icon">
-                        <component :is="roomStore.isMuted ? 'MuteNotification' : 'Mic'"></component>
+                        <component :is="roomStore.isMuted ? 'VideoPause' : 'VideoPlay'"></component>
                       </i>
                     </button>
                   </div>
@@ -1785,6 +1988,74 @@ const refreshRoomDetail = async (autoJoin = false) => {
                   </div>
                 </div>
 
+                <!-- 悬浮音量控制按钮，只在已加入语音时显示 -->
+                <div v-if="roomStore.hasJoinedVoice" class="floating-volume-controls">
+                  <!-- 麦克风音量控制 (左边) -->
+                  <div class="volume-control-wrapper">
+                    <div class="volume-control-container"
+                         @mouseenter="handleMicMouseEnter"
+                         @mouseleave="handleMicMouseLeave">
+                      <button class="volume-button mic-button">
+                        <i class="el-icon"><Mic /></i>
+                      </button>
+
+                      <!-- 麦克风音量控制面板 (竖向) -->
+                      <div class="volume-panel vertical"
+                           :class="{ 'show': showMicPanel }"
+                           @mouseenter="micPanelHovered = true"
+                           @mouseleave="micPanelHovered = false">
+                        <div class="volume-control">
+                          <div class="volume-label">
+                            <i class="el-icon"><Mic /></i>
+                          </div>
+                          <!-- 自定义滑块代替 Element Plus 的滑块 -->
+                          <div class="custom-slider">
+                            <div class="slider-track">
+                              <div class="slider-fill" :style="{ height: micVolumeValue + '%' }"></div>
+                              <div class="slider-thumb" :style="{ bottom: micVolumeValue + '%' }" @mousedown="startDragMic"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 扬声器音量控制 (右边) -->
+                  <div class="volume-control-wrapper">
+                    <div class="volume-control-container"
+                         @mouseenter="handleSpeakerMouseEnter"
+                         @mouseleave="handleSpeakerMouseLeave">
+                      <button class="volume-button speaker-button">
+                        <i class="el-icon"><Headset /></i>
+                        <div class="sound-wave" :class="{ 'active': isPlayingAudio }">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </button>
+
+                      <!-- 扬声器音量控制面板 (竖向) -->
+                      <div class="volume-panel vertical"
+                           :class="{ 'show': showSpeakerPanel }"
+                           @mouseenter="speakerPanelHovered = true"
+                           @mouseleave="speakerPanelHovered = false">
+                        <div class="volume-control">
+                          <div class="volume-label">
+                            <i class="el-icon"><Headset /></i>
+                          </div>
+                          <!-- 自定义滑块代替 Element Plus 的滑块 -->
+                          <div class="custom-slider">
+                            <div class="slider-track">
+                              <div class="slider-fill speaker-fill" :style="{ height: speakerVolumeValue + '%' }"></div>
+                              <div class="slider-thumb" :style="{ bottom: speakerVolumeValue + '%' }" @mousedown="startDragSpeaker"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="voice-participants">
                   <!-- 当前用户，只有在已加入语音时才显示 -->
                   <div v-if="roomStore.hasJoinedVoice" class="voice-participant speaking">
@@ -1792,7 +2063,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                     <span class="participant-name">{{ userStore.username }} (您)</span>
                     <div class="voice-indicator"></div>
                     <i v-if="roomStore.isMuted" class="el-icon voice-muted-icon">
-                      <MuteNotification />
+                      <VideoPause />
                     </i>
                   </div>
 
@@ -1809,7 +2080,7 @@ const refreshRoomDetail = async (autoJoin = false) => {
                     </span>
                     <div class="voice-indicator"></div>
                     <i v-if="user.isMuted" class="el-icon voice-muted-icon">
-                      <MuteNotification />
+                      <VideoPause />
                     </i>
                   </div>
 

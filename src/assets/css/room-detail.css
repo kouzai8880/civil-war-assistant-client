@@ -451,11 +451,346 @@
   box-shadow: 0 0 10px rgba(245, 108, 108, 0.5);
 }
 
+/* 悬浮音量控制按钮 */
+.floating-volume-controls {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+}
+
+.volume-control-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.volume-control-container {
+  position: relative;
+  cursor: pointer;
+}
+
+.volume-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+/* 扬声器按钮样式 */
+.speaker-button {
+  background-color: #4caf50; /* 绿色 */
+  position: relative;
+  overflow: hidden;
+}
+
+.speaker-button:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+/* 声音波动动画 */
+.sound-wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sound-wave.active {
+  opacity: 1;
+}
+
+.sound-wave span {
+  display: inline-block;
+  width: 2px;
+  height: 10px;
+  margin: 0 1px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 1px;
+  animation: sound-wave-animation 1.2s infinite ease-in-out;
+}
+
+.sound-wave span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.sound-wave span:nth-child(2) {
+  animation-delay: 0.2s;
+  height: 14px;
+}
+
+.sound-wave span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes sound-wave-animation {
+  0%, 100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.2);
+  }
+}
+
+/* 麦克风按钮样式 */
+.mic-button {
+  background-color: #2196F3; /* 蓝色 */
+}
+
+.mic-button:hover {
+  background-color: #0b7dda;
+  transform: scale(1.05);
+}
+
+.volume-button i {
+  font-size: 18px;
+}
+
+/* 音量控制面板 */
+.volume-panel {
+  position: absolute;
+  bottom: 45px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  width: 250px;
+  background-color: #1e1e2d;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  pointer-events: none; /* 默认不响应鼠标事件 */
+}
+
+/* 竖向音量控制面板 */
+.volume-panel.vertical {
+  width: 40px;
+  height: 150px;
+  bottom: 45px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(30, 30, 45, 0.9);
+  border-radius: 15px;
+  overflow: visible;
+}
+
+/* 竖向音量控制面板的标签样式 */
+.volume-panel.vertical .volume-label {
+  margin-bottom: 17px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
+/* 竖向音量控制面板的滑块样式 */
+.volume-panel.vertical .el-slider {
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 竖向音量控制面板的控制容器样式 */
+.volume-panel.vertical .volume-control {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-panel.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto; /* 显示时响应鼠标事件 */
+}
+
+/* 竖向面板显示状态 */
+.volume-panel.vertical.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 自定义竖向滑块的颜色和样式 */
+.volume-panel.vertical .el-slider__bar {
+  background-color: #4caf50;
+  width: 4px !important;
+  position: absolute !important;
+}
+
+/* 麦克风音量滑块的颜色 */
+.mic-button + .volume-panel .el-slider__bar,
+.volume-control-container:first-child .volume-panel .el-slider__bar {
+  background-color: #2196F3;
+}
+
+/* 滑块按钮样式 */
+.volume-panel.vertical .el-slider__button {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  background-color: #fff;
+}
+
+/* 滑块轨道样式 */
+.volume-panel.vertical .el-slider__runway {
+  width: 4px !important;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 0 auto !important;
+  position: absolute !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* 确保滑块在中间对齐 */
+.volume-panel.vertical .el-slider__runway,
+.volume-panel.vertical .el-slider__bar {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+}
+
+/* 重置滑块的定位方式 */
+.volume-panel.vertical .el-slider {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* 覆盖Element Plus的默认样式 */
+.volume-panel.vertical .el-slider__button-wrapper {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* 强制覆盖Element Plus的所有相关样式 */
+.volume-panel.vertical .el-slider__runway,
+.volume-panel.vertical .el-slider__bar,
+.volume-panel.vertical .el-slider__button-wrapper {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* 设置滑块按钮的大小和颜色 */
+.volume-panel.vertical .el-slider__button {
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid #fff !important;
+  background-color: #fff !important;
+}
+
+/* 设置滑块轨道的宽度 */
+.volume-panel.vertical .el-slider__runway {
+  width: 4px !important;
+}
+
+/* 设置滑块条的宽度 */
+.volume-panel.vertical .el-slider__bar {
+  width: 4px !important;
+}
+
+/* 自定义滑块样式 */
+.custom-slider {
+  width: 100%;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 0 auto;
+}
+
+.slider-track {
+  width: 4px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  position: relative;
+}
+
+.slider-fill {
+  width: 4px;
+  background-color: #2196F3;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border-radius: 2px;
+}
+
+.speaker-fill {
+  background-color: #4caf50;
+}
+
+.slider-thumb {
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.volume-control {
+  margin-bottom: 0.75rem;
+}
+
+.volume-control:last-child {
+  margin-bottom: 0;
+}
+
+.volume-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  color: #bebebe;
+  font-size: 0.9rem;
+}
+
+.volume-label i {
+  font-size: 1.2rem;
+  margin: 0 auto;
+}
+
+.volume-panel.vertical .volume-label i {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
 .voice-participants {
   flex: 1;
   overflow-y: auto;
   margin: 0.25rem 0;
-  max-height: calc(100% - 100px); /* 留出空间给标题和按钮 */
+  max-height: calc(100% - 180px); /* 留出空间给标题、按钮和音量控制 */
   display: flex;
   flex-direction: column;
 }

@@ -194,6 +194,7 @@ const goToRegister = () => {
             v-model="passwordForm.username"
             placeholder="请输入用户名"
             prefix-icon="User"
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
 
@@ -204,6 +205,7 @@ const goToRegister = () => {
             placeholder="请输入密码"
             prefix-icon="Lock"
             show-password
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
 
@@ -239,6 +241,7 @@ const goToRegister = () => {
             placeholder="请输入手机号"
             prefix-icon="Iphone"
             maxlength="11"
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
 
@@ -248,6 +251,7 @@ const goToRegister = () => {
             placeholder="请输入验证码"
             prefix-icon="ChatLineRound"
             maxlength="6"
+            @keyup.enter="handleLogin"
           >
             <template #append>
               <el-button

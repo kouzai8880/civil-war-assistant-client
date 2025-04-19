@@ -15,9 +15,12 @@ class VoiceChat {
     this.mediaStream = null;
     this.audioContext = null;
     this.scriptProcessor = null;
+    this.micGainNode = null; // 麦克风增益节点
     this.isMuted = false;
     this.isInitialized = false;
     this.audioPlayers = new Map(); // 用户ID -> 音频播放器
+    this.micVolume = 1.0; // 麦克风音量，默认为1.0
+    this.speakerVolume = 1.0; // 扬声器音量，默认为1.0
   }
 
   /**
@@ -83,6 +86,11 @@ class VoiceChat {
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       console.log('[语音] 音频源创建成功');
 
+      // 创建麦克风增益节点
+      this.micGainNode = this.audioContext.createGain();
+      this.micGainNode.gain.value = this.micVolume;
+      console.log(`[语音] 麦克风增益节点创建成功，初始音量: ${this.micVolume}`);
+
       // 创建脚本处理器
       this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
       console.log('[语音] 脚本处理器创建成功');
@@ -128,7 +136,8 @@ class VoiceChat {
       };
 
       // 连接节点
-      source.connect(this.scriptProcessor);
+      source.connect(this.micGainNode);
+      this.micGainNode.connect(this.scriptProcessor);
       this.scriptProcessor.connect(this.audioContext.destination);
 
       console.log('[语音] 成功开始捕获麦克风音频');
@@ -211,8 +220,8 @@ class VoiceChat {
       // 创建或获取音频播放器
       let audioPlayer = this.audioPlayers.get(data.from);
       if (!audioPlayer) {
-        console.log(`[语音] 为用户 ${data.from} 创建新的音频播放器`);
-        audioPlayer = new AudioPlayer();
+        console.log(`[语音] 为用户 ${data.from} 创建新的音频播放器，音量: ${this.speakerVolume}`);
+        audioPlayer = new AudioPlayer(this.speakerVolume);
         this.audioPlayers.set(data.from, audioPlayer);
       }
 
@@ -230,6 +239,38 @@ class VoiceChat {
   setMuted(muted) {
     this.isMuted = muted;
     console.log(`麦克风${muted ? '已静音' : '已取消静音'}`);
+  }
+
+  /**
+   * 设置麦克风音量
+   * @param {number} volume - 音量值（0.0 ~ 1.0）
+   */
+  setMicVolume(volume) {
+    this.micVolume = Math.max(0, Math.min(1, volume));
+    if (this.micGainNode) {
+      this.micGainNode.gain.value = this.micVolume;
+      console.log(`麦克风音量已设置为: ${this.micVolume}`);
+    } else {
+      console.warn('麦克风增益节点不存在，无法设置音量');
+    }
+    return this.micVolume;
+  }
+
+  /**
+   * 设置扬声器音量（全局）
+   * @param {number} volume - 音量值（0.0 ~ 1.0）
+   */
+  setSpeakerVolume(volume) {
+    this.speakerVolume = Math.max(0, Math.min(1, volume));
+    console.log(`扬声器音量已设置为: ${this.speakerVolume}`);
+
+    // 更新所有音频播放器的音量
+    this.audioPlayers.forEach((player, userId) => {
+      player.setVolume(this.speakerVolume);
+      console.log(`用户 ${userId} 的音频播放器音量已设置为: ${this.speakerVolume}`);
+    });
+
+    return this.speakerVolume;
   }
 
   /**
@@ -285,10 +326,12 @@ class VoiceChat {
  * 音频播放器类
  */
 class AudioPlayer {
-  constructor() {
+  constructor(initialVolume = 1.0) {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     this.gainNode = this.audioContext.createGain();
+    this.gainNode.gain.value = initialVolume;
     this.gainNode.connect(this.audioContext.destination);
+    console.log(`[语音播放器] 创建新的音频播放器，初始音量: ${initialVolume}`);
   }
 
   /**

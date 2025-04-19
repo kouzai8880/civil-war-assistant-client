@@ -67,6 +67,8 @@ export const useRoomStore = defineStore('room', () => {
   const isMuted = ref(false)
   const voiceInstance = ref(null)
   const currentVoiceChannel = ref('none') // 'none', 'public', 'team1', 'team2'
+  const micVolume = ref(1.0) // 麦克风音量，默认为1.0
+  const speakerVolume = ref(1.0) // 扬声器音量，默认为1.0
 
   // 语音房间用户列表已移至currentRoom.voiceChannels
 
@@ -655,6 +657,80 @@ export const useRoomStore = defineStore('room', () => {
       return true
     } catch (error) {
       console.error('[语音静音] 切换静音状态失败:', error)
+      return false
+    }
+  }
+
+  // 设置麦克风音量
+  const setMicVolume = (volume) => {
+    console.log('[语音音量] 开始设置麦克风音量...')
+    console.log('[语音音量] 当前麦克风音量:', micVolume.value)
+    console.log('[语音音量] 新麦克风音量:', volume)
+
+    if (!roomData.value || !roomData.value.id) {
+      console.error('[语音音量] 无法设置麦克风音量：房间数据不存在')
+      return false
+    }
+
+    if (currentVoiceChannel.value === 'none') {
+      console.error('[语音音量] 无法设置麦克风音量：未加入语音频道')
+      return false
+    }
+
+    try {
+      // 设置麦克风音量
+      micVolume.value = Math.max(0, Math.min(1, volume))
+      console.log(`[语音音量] 麦克风音量已设置为: ${micVolume.value}`)
+
+      // 如果有语音实例，更新实例的麦克风音量
+      if (voiceInstance.value) {
+        console.log(`[语音音量] 更新语音实例的麦克风音量为: ${micVolume.value}`)
+        voiceInstance.value.setMicVolume(micVolume.value)
+      } else {
+        console.warn('[语音音量] 语音实例不存在，无法更新实例的麦克风音量')
+      }
+
+      console.log('[语音音量] 设置麦克风音量完成')
+      return true
+    } catch (error) {
+      console.error('[语音音量] 设置麦克风音量失败:', error)
+      return false
+    }
+  }
+
+  // 设置扬声器音量
+  const setSpeakerVolume = (volume) => {
+    console.log('[语音音量] 开始设置扬声器音量...')
+    console.log('[语音音量] 当前扬声器音量:', speakerVolume.value)
+    console.log('[语音音量] 新扬声器音量:', volume)
+
+    if (!roomData.value || !roomData.value.id) {
+      console.error('[语音音量] 无法设置扬声器音量：房间数据不存在')
+      return false
+    }
+
+    if (currentVoiceChannel.value === 'none') {
+      console.error('[语音音量] 无法设置扬声器音量：未加入语音频道')
+      return false
+    }
+
+    try {
+      // 设置扬声器音量
+      speakerVolume.value = Math.max(0, Math.min(1, volume))
+      console.log(`[语音音量] 扬声器音量已设置为: ${speakerVolume.value}`)
+
+      // 如果有语音实例，更新实例的扬声器音量
+      if (voiceInstance.value) {
+        console.log(`[语音音量] 更新语音实例的扬声器音量为: ${speakerVolume.value}`)
+        voiceInstance.value.setSpeakerVolume(speakerVolume.value)
+      } else {
+        console.warn('[语音音量] 语音实例不存在，无法更新实例的扬声器音量')
+      }
+
+      console.log('[语音音量] 设置扬声器音量完成')
+      return true
+    } catch (error) {
+      console.error('[语音音量] 设置扬声器音量失败:', error)
       return false
     }
   }
@@ -2657,12 +2733,16 @@ export const useRoomStore = defineStore('room', () => {
     isMuted,
     currentVoiceChannel,
     currentVoiceUsers,
+    micVolume,
+    speakerVolume,
 
     // 语音通信相关方法
     switchVoiceChannel,
     joinVoiceChannel,
     leaveVoiceChannel,
     toggleMute,
+    setMicVolume,
+    setSpeakerVolume,
     updateVoiceChannelUsers,
     addUserToVoiceChannel,
     removeUserFromVoiceChannel,

@@ -1220,33 +1220,78 @@ const toggleVoice = async () => {
   }
 }
 
-// 切换静音状态
-const toggleMute = () => {
-  console.log('[语音静音UI] 开始切换静音状态...')
-  console.log('[语音静音UI] 当前静音状态:', roomStore.isMuted ? '已静音' : '未静音')
-  console.log('[语音静音UI] 当前语音状态:', roomStore.hasJoinedVoice ? '已加入' : '未加入')
-  console.log('[语音静音UI] 当前语音频道:', roomStore.currentVoiceChannel)
+// 切换麦克风静音状态
+const toggleMicMute = () => {
+  console.log('[语音静音UI] 开始切换麦克风静音状态...')
+  console.log('[语音静音UI] 当前麦克风静音状态:', roomStore.isMuted ? '已静音' : '未静音')
 
   if (!roomData.value || !roomData.value.id) {
-    console.error('[语音静音UI] 无法切换静音状态：房间数据不存在')
+    console.error('[语音静音UI] 无法切换麦克风静音状态：房间数据不存在')
     return
   }
 
   if (!roomStore.hasJoinedVoice) {
-    console.error('[语音静音UI] 无法切换静音状态：未加入语音房间')
+    console.error('[语音静音UI] 无法切换麦克风静音状态：未加入语音房间')
+    // 如果未加入语音，则先加入语音
+    toggleVoice()
     return
   }
 
   try {
-    // 切换静音状态
+    // 切换麦克风静音状态
     console.log('[语音静音UI] 调用 roomStore.toggleMute()...')
     const result = roomStore.toggleMute()
     console.log(`[语音静音UI] toggleMute 返回结果: ${result ? '成功' : '失败'}`)
-    console.log('[语音静音UI] 新静音状态:', roomStore.isMuted ? '已静音' : '未静音')
+    console.log('[语音静音UI] 新麦克风静音状态:', roomStore.isMuted ? '已静音' : '未静音')
   } catch (error) {
-    console.error('[语音静音UI] 切换静音状态失败:', error)
-    ElMessage.error('切换静音状态失败')
+    console.error('[语音静音UI] 切换麦克风静音状态失败:', error)
+    ElMessage.error('切换麦克风静音状态失败')
   }
+}
+
+// 切换扬声器静音状态
+const toggleSpeakerMute = () => {
+  console.log('[语音静音UI] 开始切换扬声器静音状态...')
+  console.log('[语音静音UI] 当前扬声器静音状态:', roomStore.isSpeakerMuted ? '已静音' : '未静音')
+
+  if (!roomData.value || !roomData.value.id) {
+    console.error('[语音静音UI] 无法切换扬声器静音状态：房间数据不存在')
+    return
+  }
+
+  if (!roomStore.hasJoinedVoice) {
+    console.error('[语音静音UI] 无法切换扬声器静音状态：未加入语音房间')
+    // 如果未加入语音，则先加入语音
+    toggleVoice()
+    return
+  }
+
+  try {
+    // 切换扬声器静音状态
+    console.log('[语音静音UI] 调用 roomStore.toggleSpeakerMute()...')
+    roomStore.isSpeakerMuted = !roomStore.isSpeakerMuted
+
+    // 如果有语音实例，更新实例的扬声器音量
+    if (roomStore.voiceInstance) {
+      if (roomStore.isSpeakerMuted) {
+        // 如果静音，将扬声器音量设为0
+        roomStore.voiceInstance.setSpeakerVolume(0)
+      } else {
+        // 如果取消静音，恢复扬声器音量
+        roomStore.voiceInstance.setSpeakerVolume(roomStore.speakerVolume)
+      }
+    }
+
+    console.log('[语音静音UI] 新扬声器静音状态:', roomStore.isSpeakerMuted ? '已静音' : '未静音')
+  } catch (error) {
+    console.error('[语音静音UI] 切换扬声器静音状态失败:', error)
+    ElMessage.error('切换扬声器静音状态失败')
+  }
+}
+
+// 切换静音状态 (保留原来的函数以兼容现有代码)
+const toggleMute = () => {
+  toggleMicMute()
 }
 
 // 注意：我们现在在鼠标释放时更新音量，不再需要这些函数
@@ -1942,22 +1987,6 @@ const refreshRoomDetail = async (autoJoin = false) => {
                       </i>
                       <span class="btn-text">{{ roomStore.hasJoinedVoice ? '退出语音' : '加入语音' }}</span>
                     </button>
-
-                    <!-- 静音按钮，只在已加入语音时显示 -->
-                    <button
-                      v-if="roomStore.hasJoinedVoice"
-                      class="btn-mic"
-                      :class="{
-                        'active': roomStore.hasJoinedVoice,
-                        'muted': roomStore.isMuted
-                      }"
-                      @click="toggleMute"
-                      style="display: flex; align-items: center; justify-content: center; height: 32px; width: 36px;"
-                    >
-                      <i class="el-icon">
-                        <component :is="roomStore.isMuted ? 'VideoPause' : 'VideoPlay'"></component>
-                      </i>
-                    </button>
                   </div>
                 </div>
 
@@ -1995,8 +2024,15 @@ const refreshRoomDetail = async (autoJoin = false) => {
                     <div class="volume-control-container"
                          @mouseenter="handleMicMouseEnter"
                          @mouseleave="handleMicMouseLeave">
-                      <button class="volume-button mic-button">
-                        <i class="el-icon"><Mic /></i>
+                      <button
+                        class="volume-button mic-button"
+                        :class="{ 'muted': roomStore.isMuted }"
+                        @click="toggleMicMute"
+                      >
+                        <i class="el-icon">
+                          <Mic />
+                          <div class="mute-slash" v-if="roomStore.isMuted"></div>
+                        </i>
                       </button>
 
                       <!-- 麦克风音量控制面板 (竖向) -->
@@ -2025,9 +2061,16 @@ const refreshRoomDetail = async (autoJoin = false) => {
                     <div class="volume-control-container"
                          @mouseenter="handleSpeakerMouseEnter"
                          @mouseleave="handleSpeakerMouseLeave">
-                      <button class="volume-button speaker-button">
-                        <i class="el-icon"><Headset /></i>
-                        <div class="sound-wave" :class="{ 'active': isPlayingAudio }">
+                      <button
+                        class="volume-button speaker-button"
+                        :class="{ 'muted': roomStore.isSpeakerMuted }"
+                        @click="toggleSpeakerMute"
+                      >
+                        <i class="el-icon">
+                          <Headset />
+                          <div class="mute-slash" v-if="roomStore.isSpeakerMuted"></div>
+                        </i>
+                        <div class="sound-wave" :class="{ 'active': isPlayingAudio && !roomStore.isSpeakerMuted }">
                           <span></span>
                           <span></span>
                           <span></span>

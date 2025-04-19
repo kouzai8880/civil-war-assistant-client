@@ -65,6 +65,7 @@ export const useRoomStore = defineStore('room', () => {
   // 语音通信相关状态
   const hasJoinedVoice = ref(false)
   const isMuted = ref(false)
+  const isSpeakerMuted = ref(false) // 扬声器是否静音
   const voiceInstance = ref(null)
   const currentVoiceChannel = ref('none') // 'none', 'public', 'team1', 'team2'
   const micVolume = ref(1.0) // 麦克风音量，默认为1.0
@@ -2731,6 +2732,7 @@ export const useRoomStore = defineStore('room', () => {
 
     // 语音通信相关状态
     isMuted,
+    isSpeakerMuted,
     currentVoiceChannel,
     currentVoiceUsers,
     micVolume,

@@ -483,6 +483,8 @@
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 /* 扬声器按钮样式 */
@@ -555,6 +557,45 @@
 .mic-button:hover {
   background-color: #0b7dda;
   transform: scale(1.05);
+}
+
+/* 静音按钮样式 */
+.volume-button.muted {
+  background-color: rgba(200, 50, 50, 0.9);
+  box-shadow: 0 0 8px rgba(200, 50, 50, 0.5);
+}
+
+.volume-button.muted:hover {
+  background-color: rgba(220, 70, 70, 0.9);
+  box-shadow: 0 0 12px rgba(220, 70, 70, 0.6);
+  transform: scale(1.08);
+}
+
+/* 静音斜线样式 */
+.volume-button .mute-slash {
+  position: absolute;
+  width: 3px;
+  height: 26px;
+  background-color: #fff;
+  transform: translate(-50%, -50%) rotate(45deg);
+  top: 50%;
+  left: 50%;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+  border-radius: 1.5px;
+  animation: slashAppear 0.2s ease-out;
+}
+
+@keyframes slashAppear {
+  0% {
+    opacity: 0;
+    height: 0;
+    transform: translate(-50%, -50%) rotate(45deg) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    height: 26px;
+    transform: translate(-50%, -50%) rotate(45deg) scale(1);
+  }
 }
 
 .volume-button i {
